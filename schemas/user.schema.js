@@ -8,7 +8,10 @@ const userSchema = new mongoose.Schema({
   },
     email: {
     type: String,
-    required: true
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true 
   },
   password: {
     type: String,
@@ -19,8 +22,8 @@ const userSchema = new mongoose.Schema({
   },
 
    bio :{
-      type:string,
-       default: ' ' ,
+      type: String,
+       default: '' ,
        maxlength: [2000, 'Bio cannot exceed 2000 characters']
    },
 
@@ -56,9 +59,8 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-})
-
-{ timestamps: true };
+}
+);
 
 //Password hashing logic
 // Password hashing logic
