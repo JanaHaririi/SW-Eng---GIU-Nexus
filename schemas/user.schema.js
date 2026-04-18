@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema({
     type: String,
   },
 
-    // ===== COLLABORATOR 2:
    bio :{
       type:string,
        default: ' ' ,
@@ -59,13 +58,7 @@ const userSchema = new mongoose.Schema({
     }
 })
 
-
-  //collaborator 3
-
-
-
-
-}, { timestamps: true });
+{ timestamps: true };
 
 //Password hashing logic
 // Password hashing logic
