@@ -49,20 +49,8 @@ const userSchema = new mongoose.Schema({
     },
 
     // ===== Timestamps =====
-    createdAt: {
-        type: Date,
-        default: Date.now,
-        immutable: true
-    },
+   }, { timestamps: true });
 
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-}
-);
-
-//Password hashing logic
 // Password hashing logic
 userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) {
