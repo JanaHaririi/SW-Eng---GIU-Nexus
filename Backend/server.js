@@ -1,35 +1,29 @@
-// server.js
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
-const { errorHandler } = require('./middlewares/errorMiddleware');
+
+const { errorHandler } = require('./middlewares/errorHandler');
+const authRoutes = require('./routes/authRoutes');
 const jobRoutes = require('./routes/jobRoutes');
 
-// Load env variables
 dotenv.config();
-
-// Connect to database
 connectDB();
 
 const app = express();
 
-// Body parser middleware (allows us to accept JSON data in the body)
 app.use(express.json());
-// CORS middleware (allows a frontend to communicate with this API later)
 app.use(cors());
 
-// Basic route to test the server
 app.get('/', (req, res) => {
   res.send('GIU Nexus API is running...');
 });
 
+// Mount routes
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/jobs', jobRoutes);
 
-// --- Your Team's Routes Will Go Here Later ---
-// e.g., app.use('/api/v1/auth', authRoutes);
-
-// Custom Error Handler Middleware (Must be below all routes)
+// Custom Error Handler Middleware
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
