@@ -1,6 +1,5 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.schema');
-const User = require('../models/user.schema');
 const hf = require('../services/hfService');
 
 // GET /api/v1/profile
