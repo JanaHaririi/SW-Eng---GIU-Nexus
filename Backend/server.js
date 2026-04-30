@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middlewares/errorMiddleware');
+const jobRoutes = require('./routes/jobRoutes');
 
 // Load env variables
 dotenv.config();
@@ -22,6 +23,8 @@ app.use(cors());
 app.get('/', (req, res) => {
   res.send('GIU Nexus API is running...');
 });
+
+app.use('/api/v1/jobs', jobRoutes);
 
 // --- Your Team's Routes Will Go Here Later ---
 // e.g., app.use('/api/v1/auth', authRoutes);
