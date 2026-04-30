@@ -2,8 +2,9 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
-const { errorHandler } = require('./middlewares/errorHandler'); // Fixed path
-const authRoutes = require('./routes/authRoutes'); // Import your routes
+const { errorHandler } = require('./middlewares/errorHandler');
+const authRoutes = require('./routes/authRoutes');
+const profileRoutes = require('./routes/profileRoutes');
 
 dotenv.config();
 connectDB();
@@ -19,6 +20,7 @@ app.get('/', (req, res) => {
 
 // Mount routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/profile', profileRoutes);
 
 // Custom Error Handler Middleware (Must be below all routes)
 app.use(errorHandler);
