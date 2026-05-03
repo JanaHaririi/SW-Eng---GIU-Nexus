@@ -33,6 +33,13 @@ const userSchema = new mongoose.Schema({
         description: 'Auto-populated by Hugging Face AI from bio text'
     },
 
+    savedJobs: [
+  {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'JobPost'
+  }
+],
+
     // Role & Permissions
     role: {
         type: String,
