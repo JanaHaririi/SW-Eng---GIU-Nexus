@@ -2,10 +2,11 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
-
 const { errorHandler } = require('./middlewares/errorHandler');
 const authRoutes = require('./routes/authRoutes');
-const jobRoutes = require('./routes/jobRoutes');
+const profileRoutes = require('./routes/profileRoutes');
+const userRoutes = require('./routes/userRoutes');
+
 
 dotenv.config();
 connectDB();
@@ -21,7 +22,8 @@ app.get('/', (req, res) => {
 
 // Mount routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/jobs', jobRoutes);
+app.use('/api/v1/profile', profileRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // Custom Error Handler Middleware
 app.use(errorHandler);

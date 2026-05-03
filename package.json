@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/JanaHaririi/SW-Eng---GIU-Nexus#readme",
   "dependencies": {
+    "@huggingface/inference": "^4.13.15",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
