@@ -1,4 +1,5 @@
 const express = require('express');
+const router = express.Router();
 const {
   getJobs,
   getJobById,
@@ -7,8 +8,6 @@ const {
 } = require('../controllers/jobController');
 
 const { protect, authorize } = require('../middlewares/auth');
-
-const router = express.Router();
 
 router.get('/', getJobs);
 

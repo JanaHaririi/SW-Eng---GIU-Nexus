@@ -6,7 +6,7 @@ const { errorHandler } = require('./middlewares/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const userRoutes = require('./routes/userRoutes');
-
+const jobRoutes = require('./routes/jobRoutes');   // ✅ added
 
 dotenv.config();
 connectDB();
@@ -24,12 +24,11 @@ app.get('/', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/jobs', jobRoutes);
 
-// Custom Error Handler Middleware
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
