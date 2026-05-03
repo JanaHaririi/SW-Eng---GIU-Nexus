@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../models/user.schema');
 
 // @desc    Get all users with pagination and filtering
 // @route   GET /api/v1/users
@@ -86,7 +86,7 @@ const updateUserStatus = async (req, res, next) => {
 
         const user = await User.findByIdAndUpdate(
             id,
-            { status },
+            { recruiterStatus: status },
             { new: true, runValidators: true }
         ).select('-password');
 
@@ -170,8 +170,7 @@ const getAdminStats = async (req, res, next) => {
         });
 
         // Applications by status (need Application model)
-        const Application = require('../models/Application');
-        const appsByStatus = await Application.aggregate([
+        const Application = require('../models/application.schema');        const appsByStatus = await Application.aggregate([
             { $group: { _id: '$status', count: { $sum: 1 } } }
         ]);
 
