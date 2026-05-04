@@ -117,3 +117,60 @@ exports.getSavedJobs = async (req, res, next) => {
     next(err);
   }
 };
+
+// 5. UPDATE job
+exports.updateJob = async (req, res, next) => {
+  try {
+    const job = await JobPost.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // Only approved recruiters can update jobs
+    if (req.user.role === 'recruiter' && req.user.recruiterStatus !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval. Wait for admin approval before updating jobs.'
+      });
+    }
+
+    // Only the recruiter who created the job can update it
+    if (job.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorised to edit this job'
+      });
+    }
+
+    const allowedUpdates = [
+      'title',
+      'company',
+      'description',
+      'requirements',
+      'location',
+      'type',
+      'salary',
+      'totalSlots',
+      'status'
+    ];
+
+    allowedUpdates.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        job[field] = req.body[field];
+      }
+    });
+
+    await job.save();
+
+    res.status(200).json({
+      success: true,
+      job
+    });
+  } catch (err) {
+    next(err);
+  }
+};
