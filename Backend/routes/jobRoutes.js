@@ -11,6 +11,7 @@ const {
   updateJob,
   deleteJob
 } = require('../controllers/jobController');
+const { getJobApplicants } = require('../controllers/applicationController');
 
 const { protect, authorize } = require('../middlewares/auth');
 
@@ -54,7 +55,8 @@ router.delete(
   deleteJob
 );
 
-// public single job route
+router.get('/:jobId/applicants', protect, authorize('recruiter', 'admin'), getJobApplicants);
+
 router.get('/:id', getJobById);
 
 // save/unsave route
