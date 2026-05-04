@@ -1,5 +1,6 @@
 const JobPost = require('../models/JobPost');
 const User = require('../models/user.schema');
+const hf = require('../services/hfService');
 
 // 1. GET all jobs (with search + filters)
 exports.getJobs = async (req, res, next) => {
@@ -112,6 +113,194 @@ exports.getSavedJobs = async (req, res, next) => {
     res.status(200).json({
       success: true,
       jobs: user.savedJobs
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+// 5. CREATE job
+exports.createJob = async (req, res, next) => {
+  try {
+    // recruiter approval check
+    if (req.user.status !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Your account is pending approval. Wait for admin approval before posting jobs.'
+      });
+    }
+
+    const {
+      title,
+      company,
+      description,
+      requirements,
+      location,
+      type,
+      salary,
+      totalSlots
+    } = req.body;
+
+    let category = 'Other';
+
+    // AI classification
+    try {
+      const result = await hf.zeroShotClassification({
+        model: 'facebook/bart-large-mnli',
+        inputs: [description],
+        parameters: {
+          candidate_labels: [
+            'Frontend',
+            'Backend',
+            'AI/ML',
+            'DevOps',
+            'Data Engineering',
+            'Other'
+          ]
+        }
+      });
+
+      category = result[0].labels[0];
+    } catch (error) {
+      console.log('AI classification failed:', error.message);
+    }
+
+    const job = await JobPost.create({
+      title,
+      company,
+      description,
+      requirements,
+      location,
+      type,
+      salary,
+      totalSlots,
+      category,
+      createdBy: req.user._id
+    });
+
+    res.status(201).json({
+      success: true,
+      job
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 6. GET recruiter jobs
+exports.getMyJobs = async (req, res, next) => {
+  try {
+    const jobs = await JobPost.find({
+      createdBy: req.user._id
+    });
+
+    res.status(200).json({
+      success: true,
+      jobs
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 7. UPDATE job
+exports.updateJob = async (req, res, next) => {
+  try {
+    const job = await JobPost.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // ownership check
+    if (job.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorised to edit this job'
+      });
+    }
+
+    // recruiter approval check
+    if (req.user.status !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval'
+      });
+    }
+
+    // reclassify if description updated
+    if (req.body.description) {
+      try {
+        const result = await hf.zeroShotClassification({
+          model: 'facebook/bart-large-mnli',
+          inputs: [req.body.description],
+          parameters: {
+            candidate_labels: [
+              'Frontend',
+              'Backend',
+              'AI/ML',
+              'DevOps',
+              'Data Engineering',
+              'Other'
+            ]
+          }
+        });
+
+        req.body.category = result[0].labels[0];
+      } catch (error) {
+        req.body.category = 'Other';
+      }
+    }
+
+    const updatedJob = await JobPost.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      job: updatedJob
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 8. DELETE job
+exports.deleteJob = async (req, res, next) => {
+  try {
+    const job = await JobPost.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    // owner/admin check
+    if (
+      job.createdBy.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorised to delete this job'
+      });
+    }
+
+    await job.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Job deleted'
     });
   } catch (err) {
     next(err);
