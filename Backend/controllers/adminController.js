@@ -1,6 +1,6 @@
 const User = require('../models/user.schema');
 const JobPost = require('../models/JobPost');
-const Application = require('../models/Application');
+const Application = require('../models/application.schema');
 
 // GET admin dashboard statistics
 exports.getAdminStats = async (req, res, next) => {

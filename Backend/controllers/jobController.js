@@ -1,6 +1,6 @@
 const JobPost = require('../models/JobPost');
 const User = require('../models/user.schema');
-const Application = require('../models/Application');
+const Application = require('../models/application.schema');
 const hf = require('../services/hfService');
 
 // 1. GET all jobs (with search + filters)

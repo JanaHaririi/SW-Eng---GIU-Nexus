@@ -8,7 +8,7 @@ const {
   toggleSaveJob,
   getSavedJobs,
   applyToJob,
-  getRecommendedJobs
+  getRecommendedJobs,
   createJob,
   getMyJobs,
   updateJob,
