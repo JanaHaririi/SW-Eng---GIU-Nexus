@@ -9,8 +9,8 @@ const { errorHandler } = require('./middlewares/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const userRoutes = require('./routes/userRoutes');
-const jobRoutes = require('./routes/jobRoutes');
-const adminRoutes = require('./routes/adminRoutes');
+const jobRoutes = require('./routes/jobRoutes');   // ✅ added
+const applicationRoutes = require('./routes/applicationRoutes');
 
 dotenv.config();
 
@@ -36,6 +36,7 @@ app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/users', userRoutes);
 
 app.use('/api/v1/jobs', jobRoutes);
+app.use('/api/v1/applications', applicationRoutes);
 
 app.use('/api/v1/admin', adminRoutes);
 

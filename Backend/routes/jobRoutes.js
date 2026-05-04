@@ -9,22 +9,19 @@ const {
   getSavedJobs,
   applyToJob,
   getRecommendedJobs
+  createJob,
+  getMyJobs,
+  updateJob,
+  deleteJob
 } = require('../controllers/jobController');
+const { getJobApplicants } = require('../controllers/applicationController');
 
 const { protect, authorize } = require('../middlewares/auth');
 
-// GET all jobs
+// public routes
 router.get('/', getJobs);
 
-// GET recommended jobs
-router.get(
-  '/recommended',
-  protect,
-  authorize('jobSeeker'),
-  getRecommendedJobs
-);
-
-// GET saved jobs
+// must be before /:id
 router.get(
   '/saved',
   protect,
@@ -32,18 +29,41 @@ router.get(
   getSavedJobs
 );
 
-// APPLY to a job
+// recruiter routes
 router.post(
-  '/:jobId/apply',
+  '/',
   protect,
-  authorize('jobSeeker'),
-  applyToJob
+  authorize('recruiter'),
+  createJob
 );
+
+router.get(
+  '/my-jobs',
+  protect,
+  authorize('recruiter'),
+  getMyJobs
+);
+
+router.patch(
+  '/:id',
+  protect,
+  authorize('recruiter'),
+  updateJob
+);
+
+router.delete(
+  '/:id',
+  protect,
+  authorize('recruiter', 'admin'),
+  deleteJob
+);
+
+router.get('/:jobId/applicants', protect, authorize('recruiter', 'admin'), getJobApplicants);
 
 // GET single job
 router.get('/:id', getJobById);
 
-// SAVE / UNSAVE job
+// save/unsave route
 router.post(
   '/:id/save',
   protect,
