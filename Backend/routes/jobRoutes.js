@@ -1,4 +1,5 @@
 const express = require('express');
+
 const router = express.Router();
 
 const {
@@ -6,6 +7,8 @@ const {
   getJobById,
   toggleSaveJob,
   getSavedJobs,
+  applyToJob,
+  getRecommendedJobs
   createJob,
   getMyJobs,
   updateJob,
@@ -57,6 +60,7 @@ router.delete(
 
 router.get('/:jobId/applicants', protect, authorize('recruiter', 'admin'), getJobApplicants);
 
+// GET single job
 router.get('/:id', getJobById);
 
 // save/unsave route
