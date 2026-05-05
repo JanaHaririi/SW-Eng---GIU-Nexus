@@ -207,44 +207,154 @@ exports.applyToJob = async (req, res, next) => {
 };
 
 // 6. GET recommended jobs
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function hfInfer(modelId, body, label, { retries = 3, delayMs = 4000 } = {}) {
+  if (!process.env.HF_TOKEN) throw new Error('HF_TOKEN env var is missing');
+
+  const url = `https://router.huggingface.co/hf-inference/models/${modelId}`;
+  const payload = JSON.stringify({
+    ...body,
+    options: { wait_for_model: true, use_cache: true },
+  });
+
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const t0 = Date.now();
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          'Content-Type': 'application/json',
+          'x-wait-for-model': 'true',
+        },
+        body: payload,
+      });
+
+      const ms = Date.now() - t0;
+      const ct = response.headers.get('content-type') || '';
+      console.log(`[HF:${label}] attempt ${attempt + 1}/${retries + 1} -> ${response.status} (${ms}ms, ${ct})`);
+
+      if (response.ok) {
+        return ct.includes('application/json') ? response.json() : response.text();
+      }
+
+      const errText = (await response.text()).slice(0, 800);
+      console.warn(`[HF:${label}] non-OK body: ${errText}`);
+
+      if ((response.status === 503 || response.status === 429) && attempt < retries) {
+        await sleep(delayMs * (attempt + 1));
+        continue;
+      }
+      throw new Error(`HF ${response.status}: ${errText}`);
+    } catch (netErr) {
+      lastErr = netErr;
+      console.warn(`[HF:${label}] attempt ${attempt + 1} threw: ${netErr.message}`);
+      if (attempt < retries) {
+        await sleep(delayMs * (attempt + 1));
+        continue;
+      }
+      break;
+    }
+  }
+  throw lastErr;
+}
+
+function cosineSimilarity(a, b) {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+function flattenEmbedding(emb) {
+  // featureExtraction can return number[] or number[][] depending on the model.
+  // sentence-transformers usually returns number[] per input. If we get a 2D
+  // matrix per input (token-level), mean-pool it.
+  if (!Array.isArray(emb)) return [];
+  if (typeof emb[0] === 'number') return emb;
+  if (Array.isArray(emb[0]) && typeof emb[0][0] === 'number') {
+    const dim = emb[0].length;
+    const out = new Array(dim).fill(0);
+    for (const tok of emb) for (let i = 0; i < dim; i++) out[i] += tok[i];
+    for (let i = 0; i < dim; i++) out[i] /= emb.length;
+    return out;
+  }
+  return [];
+}
+
 exports.getRecommendedJobs = async (req, res, next) => {
-
   try {
-
     const user = await User.findById(req.user._id);
+    const jobs = await JobPost.find({ status: 'open' });
 
-    const jobs = await JobPost.find({
-      status: 'open'
-    });
+    if (!jobs.length) {
+      return res.status(200).json({ success: true, count: 0, jobs: [] });
+    }
 
-    // Simple AI-style matching
-    const recommendedJobs = jobs.filter(job => {
+    const skills = (user.extractedSkills || []).filter(Boolean);
+    if (skills.length === 0) {
+      return res.status(200).json({
+        success: true,
+        count: jobs.length,
+        jobs: jobs.map((j) => ({ ...j.toObject(), score: 0 })),
+        note: 'No skills on profile yet. Run /profile/extract-skills first.'
+      });
+    }
 
-      const combinedText =
-        `${job.title} ${job.description} ${job.requirements.join(' ')}`.toLowerCase();
+    const studentText = skills.join(', ');
+    const jobTexts = jobs.map((j) =>
+      `${j.title}. ${(j.requirements || []).join(', ')}. ${j.description || ''}`.trim()
+    );
 
-      return user.extractedSkills.some(skill =>
-        combinedText.includes(skill.toLowerCase())
+    try {
+      const raw = await hfInfer(
+        'sentence-transformers/all-MiniLM-L6-v2',
+        { inputs: [studentText, ...jobTexts] },
+        'featureExtraction'
       );
 
-    });
+      const vectors = Array.isArray(raw) ? raw.map(flattenEmbedding) : [];
+      if (vectors.length !== jobTexts.length + 1 || vectors[0].length === 0) {
+        throw new Error(`Unexpected embedding shape from HF (got ${vectors.length}, expected ${jobTexts.length + 1})`);
+      }
 
-    res.status(200).json({
-      success: true,
-      count: recommendedJobs.length,
-      jobs: recommendedJobs
-    });
+      const studentVec = vectors[0];
+      const scored = jobs.map((job, i) => ({
+        ...job.toObject(),
+        score: Number(cosineSimilarity(studentVec, vectors[i + 1]).toFixed(4)),
+      }));
+      scored.sort((a, b) => b.score - a.score);
 
+      return res.status(200).json({
+        success: true,
+        count: scored.length,
+        jobs: scored,
+      });
+    } catch (hfErr) {
+      // Spec: graceful failure — return all open jobs without scores.
+      console.error('[HF:featureExtraction] giving up:', hfErr?.message || hfErr);
+      return res.status(200).json({
+        success: true,
+        message: 'AI recommendations unavailable. Returning all open jobs without ranking.',
+        count: jobs.length,
+        jobs: jobs.map((j) => j.toObject()),
+      });
+    }
   } catch (err) {
     next(err);
   }
-
 };
 // 5. CREATE job
 exports.createJob = async (req, res, next) => {
   try {
     // recruiter approval check
-    if (req.user.status !== 'approved') {
+    if (req.user.recruiterStatus !== 'approved') {
       return res.status(403).json({
         success: false,
         message:
@@ -346,7 +456,7 @@ exports.updateJob = async (req, res, next) => {
     }
 
     // recruiter approval check
-    if (req.user.status !== 'approved') {
+    if (req.user.recruiterStatus !== 'approved') {
       return res.status(403).json({
         success: false,
         message: 'Your account is pending approval'

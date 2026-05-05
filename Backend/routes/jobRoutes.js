@@ -29,6 +29,13 @@ router.get(
   getSavedJobs
 );
 
+router.get(
+  '/recommended',
+  protect,
+  authorize('jobSeeker'),
+  getRecommendedJobs
+);
+
 // recruiter routes
 router.post(
   '/',
@@ -69,6 +76,14 @@ router.post(
   protect,
   authorize('jobSeeker'),
   toggleSaveJob
+);
+
+// apply to a job
+router.post(
+  '/:jobId/apply',
+  protect,
+  authorize('jobSeeker'),
+  applyToJob
 );
 
 module.exports = router;

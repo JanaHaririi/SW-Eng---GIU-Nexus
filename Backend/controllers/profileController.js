@@ -1,6 +1,92 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.schema');
-const hf = require('../services/hfService');
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Direct HF Serverless Inference call. Bypasses the SDK so we see the real
+// HTTP status + response body, and can pass wait_for_model so HF blocks until
+// the model is warm instead of returning 503.
+async function hfInfer(modelId, body, label, { retries = 3, delayMs = 4000 } = {}) {
+  if (!process.env.HF_TOKEN) {
+    throw new Error('HF_TOKEN env var is missing');
+  }
+
+  const url = `https://router.huggingface.co/hf-inference/models/${modelId}`;
+  const payload = JSON.stringify({
+    ...body,
+    options: { wait_for_model: true, use_cache: true },
+  });
+
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const t0 = Date.now();
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
+          'Content-Type': 'application/json',
+          'x-wait-for-model': 'true',
+        },
+        body: payload,
+      });
+
+      const ms = Date.now() - t0;
+      const ct = response.headers.get('content-type') || '';
+      console.log(`[HF:${label}] attempt ${attempt + 1}/${retries + 1} -> ${response.status} (${ms}ms, ${ct})`);
+
+      if (response.ok) {
+        return ct.includes('application/json') ? response.json() : response.text();
+      }
+
+      const errText = (await response.text()).slice(0, 800);
+      console.warn(`[HF:${label}] non-OK body: ${errText}`);
+
+      // 503 = model loading; 429 = rate limit. Retry both.
+      if ((response.status === 503 || response.status === 429) && attempt < retries) {
+        await sleep(delayMs * (attempt + 1));
+        continue;
+      }
+      throw new Error(`HF ${response.status}: ${errText}`);
+    } catch (netErr) {
+      lastErr = netErr;
+      console.warn(`[HF:${label}] attempt ${attempt + 1} threw: ${netErr.message}`);
+      if (attempt < retries) {
+        await sleep(delayMs * (attempt + 1));
+        continue;
+      }
+      break;
+    }
+  }
+  throw lastErr;
+}
+
+function cleanExtractedSkills(nerResult) {
+  if (!Array.isArray(nerResult)) return [];
+
+  // With aggregation_strategy: "simple", HF returns merged entities like:
+  //   { entity_group: "MISC", word: "French Cuisine", score: 0.97, ... }
+  // We keep MISC and ORG groups (technologies, frameworks, organisations).
+  const allowedGroups = ['MISC', 'ORG'];
+
+  const seen = new Set();
+  const cleaned = [];
+
+  for (const item of nerResult) {
+    const group = item.entity_group || item.entity;
+    if (!allowedGroups.includes(group)) continue;
+
+    const word = (item.word || '').replace(/\s+/g, ' ').trim();
+    if (word.length < 2) continue;
+
+    const key = word.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push(word);
+  }
+
+  return cleaned;
+}
 
 // GET /api/v1/profile
 const getProfile = async (req, res, next) => {
@@ -127,28 +213,30 @@ const extractSkills = async (req, res, next) => {
     }
 
     try {
-      const result = await hf.tokenClassification({
-        model: 'dslim/bert-base-NER',
-        inputs: user.bio,
-      });
+      const rawNer = await hfInfer(
+        'dslim/bert-base-NER',
+        {
+          inputs: user.bio,
+          parameters: { aggregation_strategy: 'simple' },
+        },
+        'tokenClassification'
+      );
 
-      const extractedSkills = cleanExtractedSkills(result);
-
-      user.skills = extractedSkills;
+      const extractedSkills = cleanExtractedSkills(rawNer);
+      user.extractedSkills = extractedSkills;
       await user.save();
 
       return res.status(200).json({
         success: true,
-        skills: user.skills,
-        extracted: extractedSkills,
+        extractedSkills: user.extractedSkills,
       });
     } catch (hfError) {
-      console.error('Hugging Face skill extraction error:', hfError.message);
-
+      // Spec: graceful failure — log, return existing skills unchanged with 200.
+      console.error('[HF:tokenClassification] giving up:', hfError?.message || hfError);
       return res.status(200).json({
         success: true,
         message: 'AI skill extraction failed. Existing skills returned unchanged.',
-        skills: user.skills || [],
+        extractedSkills: user.extractedSkills || [],
         extracted: [],
       });
     }
@@ -156,36 +244,6 @@ const extractSkills = async (req, res, next) => {
     next(error);
   }
 };
-
-function cleanExtractedSkills(nerResult) {
-  if (!Array.isArray(nerResult)) {
-    return [];
-  }
-
-  const allowedTags = ['B-MISC', 'I-MISC', 'B-ORG', 'I-ORG', 'MISC', 'ORG'];
-
-  const skills = nerResult
-    .filter((item) => {
-      const tag = item.entity_group || item.entity;
-      return allowedTags.includes(tag);
-    })
-    .map((item) => item.word || '')
-    .map((word) => word.replace(/^##/, ''))
-    .map((word) => word.trim())
-    .filter((word) => word.length > 1);
-
-  const cleaned = [];
-
-  for (const skill of skills) {
-    const normalized = skill.replace(/[^\w#+.-]/g, '').trim();
-
-    if (normalized && !cleaned.includes(normalized)) {
-      cleaned.push(normalized);
-    }
-  }
-
-  return cleaned;
-}
 
 module.exports = {
   getProfile,
