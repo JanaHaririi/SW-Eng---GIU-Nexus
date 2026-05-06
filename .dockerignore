@@ -1,0 +1,14 @@
+node_modules
+.env
+.env.*
+.git
+.gitignore
+tests
+Frontend
+frontend
+.github
+.vscode
+README.md
+Dockerfile
+docker-compose.yml
+*.log
