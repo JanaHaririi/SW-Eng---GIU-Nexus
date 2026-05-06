@@ -1,6 +1,7 @@
 // middlewares/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.schema');
+const { isRevoked } = require('../utils/tokenBlacklist');
 
 // Protect routes
 exports.protect = async (req, res, next) => {
@@ -11,9 +12,9 @@ exports.protect = async (req, res, next) => {
     }
 
     if (!token) {
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Not authorized to access this route' 
+        return res.status(401).json({
+            success: false,
+            message: 'Not authorized to access this route'
         });
     }
 
@@ -21,22 +22,30 @@ exports.protect = async (req, res, next) => {
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+        if (isRevoked(decoded.jti)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token revoked'
+            });
+        }
+
         // Look up the user — token may be valid but user could have been deleted
         const user = await User.findById(decoded.id);
 
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Not authorized — user no longer exists' 
+            return res.status(401).json({
+                success: false,
+                message: 'Not authorized — user no longer exists'
             });
         }
 
+        user.jti = decoded.jti;
         req.user = user;
         next();
     } catch (err) {
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Not authorized to access this route' 
+        return res.status(401).json({
+            success: false,
+            message: 'Not authorized to access this route'
         });
     }
 };

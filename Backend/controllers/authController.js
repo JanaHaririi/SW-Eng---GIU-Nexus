@@ -4,11 +4,13 @@ const User = require('../models/user.schema');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 const sendEmail = require('../services/emailService');
+const { revoke } = require('../utils/tokenBlacklist');
 
 // Helper function to generate JWT
 const generateToken = (id, role) => {
-    return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+    return jwt.sign({ id, role, jti: uuidv4() }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRE || '7d'
     });
 };
@@ -119,6 +121,8 @@ exports.login = async (req, res, next) => {
 // @route   POST /api/v1/auth/logout
 // @access  Private
 exports.logout = async (req, res, next) => {
+
+    revoke(req.user.jti);
 
     res.status(200).json({
         success: true,
