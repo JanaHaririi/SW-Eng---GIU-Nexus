@@ -131,7 +131,7 @@ exports.logout = async (req, res, next) => {
 
 };
 
-// @desc    Forgot password
+// @desc    Forgot password — sends a 6-digit OTP to the user's email
 // @route   POST /api/v1/auth/forgot-password
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
@@ -149,42 +149,104 @@ exports.forgotPassword = async (req, res, next) => {
             });
         }
 
-        // Generate reset token
-        const resetToken = crypto.randomBytes(20).toString('hex');
+        // Generate a random 6-digit OTP (zero-padded so leading zeros are preserved)
+        const otp = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
 
-        // Hash token and save
-        user.resetPasswordToken = crypto
-            .createHash('sha256')
-            .update(resetToken)
-            .digest('hex');
-
-        // Token expires in 10 mins
-        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+        user.otp = otp;
+        user.otpExpiry = Date.now() + 10 * 60 * 1000;
 
         await user.save();
-
-        // Reset URL
-        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
 
         const message = `
 You requested a password reset.
 
-Please make a PATCH request to:
+Your one-time verification code is: ${otp}
 
-${resetUrl}
-
-If you did not request this email, please ignore it.
+This code will expire in 10 minutes. If you did not request a password reset, please ignore this email.
 `;
 
         await sendEmail({
             email: user.email,
-            subject: 'Password Reset Request',
+            subject: 'Password Reset Verification Code',
             message
         });
 
         res.status(200).json({
             success: true,
-            message: 'Reset email sent successfully'
+            message: 'OTP sent to email successfully'
+        });
+
+    } catch (err) {
+        next(err);
+    }
+
+};
+
+// @desc    Verify OTP and issue a password-reset link/token
+// @route   POST /api/v1/auth/verify-otp
+// @access  Public
+exports.verifyOtp = async (req, res, next) => {
+
+    try {
+
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide an email and OTP'
+            });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user || !user.otp || !user.otpExpiry) {
+            return res.status(400).json({
+                success: false,
+                message: 'No OTP request found for this email'
+            });
+        }
+
+        if (user.otpExpiry.getTime() < Date.now()) {
+            user.otp = undefined;
+            user.otpExpiry = undefined;
+            await user.save();
+
+            return res.status(400).json({
+                success: false,
+                message: 'OTP has expired. Please request a new one.'
+            });
+        }
+
+        if (user.otp !== otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Incorrect OTP'
+            });
+        }
+
+        // OTP is valid — consume it and issue the password-reset token
+        user.otp = undefined;
+        user.otpExpiry = undefined;
+
+        const resetToken = crypto.randomBytes(20).toString('hex');
+
+        user.resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+
+        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+        await user.save();
+
+        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+
+        res.status(200).json({
+            success: true,
+            message: 'OTP verified successfully',
+            resetUrl,
+            resetToken
         });
 
     } catch (err) {

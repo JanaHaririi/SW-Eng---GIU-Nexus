@@ -7,6 +7,7 @@ const {
     login,
     logout,
     forgotPassword,
+    verifyOtp,
     resetPassword
 } = require('../controllers/authController');
 
@@ -24,6 +25,8 @@ router.post('/logout', protect, logout);
 
 // Password Recovery Routes
 router.post('/forgot-password', authLimiter, forgotPassword);
+
+router.post('/verify-otp', authLimiter, verifyOtp);
 
 router.patch('/reset-password/:token', resetPassword);
 
