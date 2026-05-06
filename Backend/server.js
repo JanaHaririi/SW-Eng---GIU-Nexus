@@ -1,8 +1,10 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
 
 const connectDB = require('./config/db');
+const swaggerSpec = require('./config/swagger');
 
 const { errorHandler } = require('./middlewares/errorHandler');
 
@@ -32,6 +34,9 @@ app.use(cors());
 app.get('/', (req, res) => {
   res.send('GIU Nexus API is running...');
 });
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
