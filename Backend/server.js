@@ -19,6 +19,10 @@ connectDB();
 
 const app = express();
 
+// Trust the first proxy in front of the app (e.g. Nginx, Heroku, Render, Cloudflare)
+// so req.ip reflects the real client address used by the rate limiter.
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(express.json());
 

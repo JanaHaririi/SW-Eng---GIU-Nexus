@@ -11,18 +11,19 @@ const {
 } = require('../controllers/authController');
 
 const { protect } = require('../middlewares/auth');
+const { authLimiter } = require('../middlewares/rateLimiter');
 
 const router = express.Router();
 
 // Auth Routes
-router.post('/register', register);
+router.post('/register', authLimiter, register);
 
-router.post('/login', login);
+router.post('/login', authLimiter, login);
 
 router.post('/logout', protect, logout);
 
 // Password Recovery Routes
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', authLimiter, forgotPassword);
 
 router.patch('/reset-password/:token', resetPassword);
 
