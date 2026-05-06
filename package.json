@@ -4,7 +4,7 @@
   "description": "GIU Nexus is an AI-powered full-stack web application that helps university students find internships and jobs while giving recruiters a smarter, faster way to discover the right candidates.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --runInBand",
     "start": "node Backend/server.js",
     "dev": "nodemon Backend/server.js"
   },
@@ -37,6 +37,9 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.3.0",
+    "mongodb-memory-server": "^11.1.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   }
 }

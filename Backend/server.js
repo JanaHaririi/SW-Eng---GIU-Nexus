@@ -18,8 +18,6 @@ const adminRoutes = require('./routes/adminRoutes');
 
 dotenv.config();
 
-connectDB();
-
 const app = express();
 
 // Trust the first proxy in front of the app (e.g. Nginx, Heroku, Render, Cloudflare)
@@ -54,8 +52,17 @@ app.use('/api/v1/admin', adminRoutes);
 // Error handler
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+// In tests, supertest requires this file just to grab the configured `app`.
+// Skip the DB connect + listen so the test suite can drive its own lifecycle
+// (mongodb-memory-server connection in tests/setup.js).
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  const PORT = process.env.PORT || 5000;
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

@@ -5,6 +5,7 @@ const authLimiter = rateLimit({
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === 'test',
     handler: (req, res) => {
         res.status(429).json({
             status: 'error',
