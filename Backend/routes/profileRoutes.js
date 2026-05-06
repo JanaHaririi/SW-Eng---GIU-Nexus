@@ -8,6 +8,7 @@ const {
 } = require('../controllers/profileController');
 
 const { protect, authorize } = require('../middlewares/auth');
+const { uploadSingle } = require('../middlewares/upload');
 
 const router = express.Router();
 
@@ -44,6 +45,7 @@ router.get('/', protect, getProfile);
  *   patch:
  *     tags: [Profile]
  *     summary: Update the authenticated user's profile
+ *     description: Accepts JSON or multipart/form-data. If a `profilePicture` file is sent, it is uploaded to Cloudinary and the secure URL is stored.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -56,15 +58,30 @@ router.get('/', protect, getProfile);
  *               name:           { type: string, example: "Jana H." }
  *               bio:            { type: string, example: "Backend engineer in training." }
  *               profilePicture: { type: string, example: "https://cdn.example.com/u/jana.png" }
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:           { type: string, example: "Jana H." }
+ *               bio:            { type: string, example: "Backend engineer in training." }
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *                 description: JPEG, PNG, or WebP image up to 5MB
  *     responses:
  *       200:
  *         description: Profile updated
  *         content:
  *           application/json:
  *             example: { success: true, message: "Profile updated" }
+ *       400:
+ *         description: Invalid file type or file too large
+ *         content:
+ *           application/json:
+ *             example: { success: false, message: "File too large. Maximum size is 5MB." }
  *       401: { description: Not authorized }
  */
-router.patch('/', protect, updateProfile);
+router.patch('/', protect, uploadSingle('profilePicture'), updateProfile);
 
 /**
  * @swagger

@@ -24,6 +24,12 @@ const userSchema = new mongoose.Schema({
     type: String,
   },
 
+  // Cloudinary public_id for the current profilePicture, so the previous
+  // asset can be deleted when a new one is uploaded.
+  profilePicturePublicId: {
+    type: String,
+  },
+
   bio: {
     type: String,
     default: '',
