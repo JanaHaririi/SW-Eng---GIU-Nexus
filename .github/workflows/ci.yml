@@ -32,11 +32,9 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        working-directory: Backend
         run: npm ci
 
       - name: Run tests
-        working-directory: Backend
         run: npm test
 
   deploy:
