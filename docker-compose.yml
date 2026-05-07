@@ -1,0 +1,11 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    container_name: giu-nexus-api
+    env_file:
+      - Backend/.env
+    ports:
+      - "5000:5000"
+    restart: unless-stopped

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.schema');
+const cloudinary = require('../config/cloudinary');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -120,6 +121,33 @@ const updateProfile = async (req, res, next) => {
         updates[field] = req.body[field];
       }
     });
+
+    // If a profilePicture file was uploaded, push it to Cloudinary,
+    // delete the previous Cloudinary asset, and store the new secure_url.
+    if (req.file) {
+      const existing = await User.findById(req.user._id).select('profilePicturePublicId');
+
+      if (existing?.profilePicturePublicId) {
+        try {
+          await cloudinary.uploader.destroy(existing.profilePicturePublicId);
+        } catch (destroyErr) {
+          // Don't fail the request if the old asset can't be deleted —
+          // log and continue so the new upload still goes through.
+          console.warn('[cloudinary] failed to delete previous image:', destroyErr.message);
+        }
+      }
+
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'giu-nexus/profile-pictures', resource_type: 'image' },
+          (err, result) => (err ? reject(err) : resolve(result))
+        );
+        stream.end(req.file.buffer);
+      });
+
+      updates.profilePicture = uploadResult.secure_url;
+      updates.profilePicturePublicId = uploadResult.public_id;
+    }
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, {
       new: true,
