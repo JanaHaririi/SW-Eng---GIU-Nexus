@@ -2,11 +2,11 @@
   "name": "sw-eng---giu-nexus",
   "version": "1.0.0",
   "description": "GIU Nexus is an AI-powered full-stack web application that helps university students find internships and jobs while giving recruiters a smarter, faster way to discover the right candidates.",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node Backend/server.js",
-    "dev": "nodemon Backend/server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "repository": {
     "type": "git",
