@@ -20,3 +20,5 @@ Team Members:
 6- Omar Hefny - 7002643
 7- Ziad Ahmed - 13004255
 8- Fares Sadek - 10002424
+
+![CI](https://github.com/JanaHaririi/SW-Eng---GIU-Nexus/actions/workflows/ci.yml/badge.svg)
