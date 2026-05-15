@@ -10,6 +10,8 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 
+import PendingRecruitersPage from "./pages/admin/PendingRecruitersPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
 // Teammate-owned pages plug in here as they're built.
 // To wire a real page: replace the matching <ComingSoon ... /> below with
 // the page component and add its import above.
@@ -134,21 +136,22 @@ export default function App() {
             <Route
               path="/admin"
               element={<ComingSoon owner="AI Logic" name="Admin Dashboard" />}
-            />
+           />
+
             <Route
-              path="/admin/users"
-              element={<ComingSoon owner="Admin" name="Admin Users" />}
+             path="/admin/users"
+              element={<AdminUsersPage />}
             />
+
             <Route
-              path="/admin/pending-recruiters"
-              element={
-                <ComingSoon owner="Admin" name="Pending Recruiters" />
-              }
+             path="/admin/pending-recruiters"
+             element={<PendingRecruitersPage />}
             />
+
             <Route
-              path="/admin/jobs"
-              element={<ComingSoon owner="AI Logic" name="Admin Jobs" />}
-            />
+             path="/admin/jobs"
+             element={<ComingSoon owner="AI Logic" name="Admin Jobs" />}
+           />
           </Route>
 
           <Route path="*" element={<NotFound />} />
