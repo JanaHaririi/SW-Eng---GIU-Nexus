@@ -3,7 +3,12 @@ import Navbar from './components/navbar.jsx';
 import Footer from './components/footer.jsx';
 import PrivateRoute from './components/privateRoute.jsx';
 import RoleRoute from './components/roleRoute.jsx';
+
 import LoginPage from './pages/loginPage.jsx';
+import RegisterPage from './pages/registerPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 
 // Teammate-owned pages plug in here as they're built.
 // To wire a real page: replace the matching <ComingSoon ... /> below with
@@ -45,17 +50,16 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* Public — Security */}
-          <Route
-            path="/register"
-            element={<ComingSoon owner="Security" name="Register" />}
-          />
+          <Route path="/register" element={<RegisterPage />} />
+
           <Route
             path="/forgot-password"
-            element={<ComingSoon owner="Security" name="Forgot Password" />}
+            element={<ForgotPasswordPage />}
           />
+
           <Route
             path="/reset-password/:token"
-            element={<ComingSoon owner="Security" name="Reset Password" />}
+            element={<ResetPasswordPage />}
           />
 
           {/* Public — Search */}
@@ -72,8 +76,9 @@ export default function App() {
           <Route element={<PrivateRoute />}>
             <Route
               path="/change-password"
-              element={<ComingSoon owner="Security" name="Change Password" />}
+              element={<ChangePasswordPage />}
             />
+
             <Route
               path="/profile"
               element={<ComingSoon owner="Profile" name="Profile" />}
