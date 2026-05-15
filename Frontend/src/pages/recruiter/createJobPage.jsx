@@ -2,7 +2,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { AuthContext } from '../../context/authContext';
+import AuthContext from '../../context/authContext';
 import CategoryBadge from '../../components/categoryBadge';
 
 const CreateJobPage = () => {
