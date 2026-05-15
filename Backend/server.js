@@ -1,6 +1,6 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 
@@ -15,8 +15,6 @@ const userRoutes = require('./routes/userRoutes');
 const jobRoutes = require('./routes/jobRoutes');   // ✅ added
 const applicationRoutes = require('./routes/applicationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-
-dotenv.config();
 
 const app = express();
 
