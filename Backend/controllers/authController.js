@@ -33,13 +33,24 @@ exports.register = async (req, res, next) => {
             });
         }
 
+        // Recruiters require admin approval; everyone else is approved on signup.
+        const recruiterStatus = role === 'recruiter' ? 'pending' : 'approved';
+
         // Create user
         const user = await User.create({
             username: name,
             email,
             password,
-            role
+            role,
+            recruiterStatus
         });
+
+        if (user.role === 'recruiter') {
+            return res.status(201).json({
+                success: true,
+                message: 'Your recruiter account is pending admin approval.'
+            });
+        }
 
         const token = generateToken(user._id, user.role);
 
@@ -96,6 +107,13 @@ exports.login = async (req, res, next) => {
             });
         }
 
+        if (user.recruiterStatus !== 'approved') {
+            return res.status(403).json({
+                success: false,
+                message: 'Account pending admin approval.'
+            });
+        }
+
         const token = generateToken(user._id, user.role);
 
         res.status(200).json({
@@ -131,122 +149,61 @@ exports.logout = async (req, res, next) => {
 
 };
 
-// @desc    Forgot password — sends a 6-digit OTP to the user's email
+// @desc    Forgot password — emails a reset link to the user
 // @route   POST /api/v1/auth/forgot-password
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
 
     try {
 
-        const user = await User.findOne({
-            email: req.body.email
-        });
+        const user = await User.findOne({ email: req.body.email });
 
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
+        // Only do the work if the user exists, but always respond with the
+        // same generic message so the endpoint can't be used to enumerate
+        // registered emails.
+        if (user) {
+            const rawToken = crypto.randomBytes(32).toString('hex');
+            const hashedToken = crypto
+                .createHash('sha256')
+                .update(rawToken)
+                .digest('hex');
 
-        // Generate a random 6-digit OTP (zero-padded so leading zeros are preserved)
-        const otp = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+            user.resetPasswordToken = hashedToken;
+            user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
 
-        user.otp = otp;
-        user.otpExpiry = Date.now() + 10 * 60 * 1000;
-
-        await user.save();
-
-        const message = `
-You requested a password reset.
-
-Your one-time verification code is: ${otp}
-
-This code will expire in 10 minutes. If you did not request a password reset, please ignore this email.
-`;
-
-        await sendEmail({
-            email: user.email,
-            subject: 'Password Reset Verification Code',
-            message
-        });
-
-        res.status(200).json({
-            success: true,
-            message: 'OTP sent to email successfully'
-        });
-
-    } catch (err) {
-        next(err);
-    }
-
-};
-
-// @desc    Verify OTP and issue a password-reset link/token
-// @route   POST /api/v1/auth/verify-otp
-// @access  Public
-exports.verifyOtp = async (req, res, next) => {
-
-    try {
-
-        const { email, otp } = req.body;
-
-        if (!email || !otp) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide an email and OTP'
-            });
-        }
-
-        const user = await User.findOne({ email });
-
-        if (!user || !user.otp || !user.otpExpiry) {
-            return res.status(400).json({
-                success: false,
-                message: 'No OTP request found for this email'
-            });
-        }
-
-        if (user.otpExpiry.getTime() < Date.now()) {
-            user.otp = undefined;
-            user.otpExpiry = undefined;
             await user.save();
 
-            return res.status(400).json({
-                success: false,
-                message: 'OTP has expired. Please request a new one.'
-            });
+            const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
+
+            const text =
+                'You requested a password reset.\n\n' +
+                `Click the link below to set a new password:\n${resetUrl}\n\n` +
+                'This link expires in 10 minutes. ' +
+                'If you did not request this, ignore this email.';
+
+            const html =
+                `<p>You requested a password reset.</p>` +
+                `<p>Click the link below to set a new password:</p>` +
+                `<p><a href="${resetUrl}">${resetUrl}</a></p>` +
+                `<p>This link expires in 10 minutes. ` +
+                `If you did not request this, ignore this email.</p>`;
+
+            try {
+                await sendEmail({
+                    email: user.email,
+                    subject: 'GIU Nexus — Password Reset Link',
+                    text,
+                    html
+                });
+            } catch (mailErr) {
+                // Log but don't leak status — keep response generic.
+                console.error('Password reset email failed:', mailErr);
+            }
         }
-
-        if (user.otp !== otp) {
-            return res.status(400).json({
-                success: false,
-                message: 'Incorrect OTP'
-            });
-        }
-
-        // OTP is valid — consume it and issue the password-reset token
-        user.otp = undefined;
-        user.otpExpiry = undefined;
-
-        const resetToken = crypto.randomBytes(20).toString('hex');
-
-        user.resetPasswordToken = crypto
-            .createHash('sha256')
-            .update(resetToken)
-            .digest('hex');
-
-        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
-
-        await user.save();
-
-        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
 
         res.status(200).json({
             success: true,
-            message: 'OTP verified successfully',
-            resetUrl,
-            resetToken
+            message: 'Password reset email sent'
         });
 
     } catch (err) {
@@ -255,44 +212,48 @@ exports.verifyOtp = async (req, res, next) => {
 
 };
 
-// @desc    Reset password
+// @desc    Reset password using the token from the email link
 // @route   PATCH /api/v1/auth/reset-password/:token
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
 
     try {
 
-        // Hash incoming token
-        const resetPasswordToken = crypto
+        const hashedToken = crypto
             .createHash('sha256')
             .update(req.params.token)
             .digest('hex');
 
-        // Find user with valid token
         const user = await User.findOne({
-            resetPasswordToken,
+            resetPasswordToken: hashedToken,
             resetPasswordExpire: { $gt: Date.now() }
         });
 
         if (!user) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid or expired token'
+                message: 'Token is invalid or has expired'
             });
         }
 
-        // Set new password
         user.password = req.body.password;
-
-        // Clear reset fields
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
 
         await user.save();
 
+        const token = generateToken(user._id, user.role);
+
         res.status(200).json({
             success: true,
-            message: 'Password reset successful'
+            token,
+            user: {
+                _id: user._id,
+                name: user.username,
+                email: user.email,
+                role: user.role,
+                status: user.recruiterStatus
+            }
         });
 
     } catch (err) {

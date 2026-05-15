@@ -7,7 +7,6 @@ const {
     login,
     logout,
     forgotPassword,
-    verifyOtp,
     resetPassword
 } = require('../controllers/authController');
 
@@ -126,8 +125,8 @@ router.post('/logout', protect, logout);
  * /auth/forgot-password:
  *   post:
  *     tags: [Auth]
- *     summary: Request a password-reset OTP
- *     description: Generates a 6-digit OTP, stores it on the user with a 10-minute expiry, and emails it.
+ *     summary: Request a password-reset link
+ *     description: Generates a reset token, stores its hash on the user with a 10-minute expiry, and emails a clickable reset link. Always returns the same generic response to prevent email enumeration.
  *     requestBody:
  *       required: true
  *       content:
@@ -139,62 +138,26 @@ router.post('/logout', protect, logout);
  *               email: { type: string, format: email, example: "jana@student.giu-uni.de" }
  *     responses:
  *       200:
- *         description: OTP emailed
+ *         description: Generic success — sent whether or not the email exists
  *         content:
  *           application/json:
- *             example: { success: true, message: "OTP sent to email successfully" }
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             example: { success: false, message: "User not found" }
+ *             example: { success: true, message: "Password reset email sent" }
  *       429: { description: Too many requests }
  */
 router.post('/forgot-password', authLimiter, forgotPassword);
 
 /**
  * @swagger
- * /auth/verify-otp:
- *   post:
- *     tags: [Auth]
- *     summary: Verify OTP and receive a password-reset link/token
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, otp]
- *             properties:
- *               email: { type: string, format: email, example: "jana@student.giu-uni.de" }
- *               otp:   { type: string, example: "048273" }
- *     responses:
- *       200:
- *         description: OTP valid; reset token issued
- *         content:
- *           application/json:
- *             example: { success: true, message: "OTP verified successfully", resetUrl: "http://localhost:3000/reset-password/2c3a...", resetToken: "2c3a4f5b6d7e..." }
- *       400:
- *         description: Missing fields, expired OTP, or incorrect OTP
- *         content:
- *           application/json:
- *             example: { success: false, message: "Incorrect OTP" }
- *       429: { description: Too many requests }
- */
-router.post('/verify-otp', authLimiter, verifyOtp);
-
-/**
- * @swagger
  * /auth/reset-password/{token}:
  *   patch:
  *     tags: [Auth]
- *     summary: Reset password using the token from verify-otp
+ *     summary: Reset password using the token from the forgot-password email
  *     parameters:
  *       - in: path
  *         name: token
  *         required: true
  *         schema: { type: string }
- *         description: Plain reset token returned by /auth/verify-otp
+ *         description: Raw reset token from the link emailed by /auth/forgot-password
  *     requestBody:
  *       required: true
  *       content:
@@ -206,15 +169,18 @@ router.post('/verify-otp', authLimiter, verifyOtp);
  *               password: { type: string, format: password, example: "N3wPass!word" }
  *     responses:
  *       200:
- *         description: Password updated
+ *         description: Password updated; new JWT issued
  *         content:
  *           application/json:
- *             example: { success: true, message: "Password reset successful" }
+ *             example:
+ *               success: true
+ *               token: "eyJhbGciOiJIUzI1NiIs..."
+ *               user: { _id: "66312abf0b0a3d0012ef00aa", name: "Jana Hariri", email: "jana@student.giu-uni.de", role: "jobSeeker", status: "approved" }
  *       400:
  *         description: Invalid or expired token
  *         content:
  *           application/json:
- *             example: { success: false, message: "Invalid or expired token" }
+ *             example: { success: false, message: "Token is invalid or has expired" }
  */
 router.patch('/reset-password/:token', resetPassword);
 
