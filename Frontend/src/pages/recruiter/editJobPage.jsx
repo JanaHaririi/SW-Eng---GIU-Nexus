@@ -1,81 +1,80 @@
-// src/pages/recruiter/EditJobPage.jsx
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+// Frontend/src/pages/recruiter/editJobPage.jsx
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api';
-import CategoryBadge from '../../components/CategoryBadge';
-import Spinner from '../../components/Spinner';
+import { AuthContext } from '../../context/authContext';
+import CategoryBadge from '../../components/categoryBadge';
+import Spinner from '../../components/spinner';
 
 const EditJobPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useContext(AuthContext);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
     const [job, setJob] = useState(null);
-    const [originalDescription, setOriginalDescription] = useState('');
+    const [showCategoryWarning, setShowCategoryWarning] = useState(false);
 
     const [formData, setFormData] = useState({
         title: '',
         company: '',
         description: '',
-        requirements: [],
+        requirements: [''],
         location: '',
         type: 'full-time',
         salary: '',
-        totalSlots: 1,
-        status: 'open'
+        totalSlots: 1
     });
 
     const jobTypes = ['full-time', 'part-time', 'contract', 'internship', 'remote'];
-    const locations = ['On-site', 'Hybrid', 'Remote', 'New York', 'San Francisco', 'London', 'Berlin', 'Dubai'];
-    const jobStatuses = ['open', 'closed', 'on-hold'];
 
     useEffect(() => {
-        fetchJobDetails();
+        fetchJob();
     }, [id]);
 
-    const fetchJobDetails = async () => {
+    const fetchJob = async () => {
+        setLoading(true);
         try {
-            setLoading(true);
-            const response = await api.get(`/api/v1/jobs/${id}`);
+            // Fixed: removed duplicate /api/v1 prefix
+            const response = await api.get(`/jobs/${id}`);
             const jobData = response.data.data;
             setJob(jobData);
-            setOriginalDescription(jobData.description);
             setFormData({
                 title: jobData.title || '',
                 company: jobData.company || '',
                 description: jobData.description || '',
-                requirements: jobData.requirements || [],
+                requirements: jobData.requirements?.length ? jobData.requirements : [''],
                 location: jobData.location || '',
                 type: jobData.type || 'full-time',
                 salary: jobData.salary || '',
-                totalSlots: jobData.totalSlots || 1,
-                status: jobData.status || 'open'
+                totalSlots: jobData.totalSlots || 1
             });
+            setError(null);
         } catch (err) {
-            setError('Failed to load job details. Please try again.');
             console.error('Error fetching job:', err);
+            setError('Failed to load job details. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleInputChange = (e) => {
+    const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Show warning if description is being edited
+        if (name === 'description' && value !== job?.description) {
+            setShowCategoryWarning(true);
+        }
     };
 
     const handleRequirementChange = (index, value) => {
         const newRequirements = [...formData.requirements];
         newRequirements[index] = value;
-        setFormData(prev => ({
-            ...prev,
-            requirements: newRequirements
-        }));
+        setFormData(prev => ({ ...prev, requirements: newRequirements }));
+
+        // Reset warning is fine, description is the main trigger
     };
 
     const addRequirement = () => {
@@ -86,59 +85,50 @@ const EditJobPage = () => {
     };
 
     const removeRequirement = (index) => {
-        if (formData.requirements.length > 1) {
-            const newRequirements = formData.requirements.filter((_, i) => i !== index);
-            setFormData(prev => ({
-                ...prev,
-                requirements: newRequirements
-            }));
-        }
+        const newRequirements = formData.requirements.filter((_, i) => i !== index);
+        setFormData(prev => ({ ...prev, requirements: newRequirements }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setSubmitting(true);
-        setError(null);
-        setSuccess(null);
 
-        // Filter out empty requirements
         const filteredRequirements = formData.requirements.filter(req => req.trim() !== '');
 
-        const submitData = {
-            title: formData.title,
-            company: formData.company,
-            description: formData.description,
-            requirements: filteredRequirements,
-            location: formData.location,
-            type: formData.type,
-            totalSlots: parseInt(formData.totalSlots),
-            status: formData.status
-        };
-
-        if (formData.salary && formData.salary.trim() !== '') {
-            submitData.salary = formData.salary;
+        if (filteredRequirements.length === 0) {
+            setError('Please add at least one requirement');
+            return;
         }
 
-        try {
-            await api.patch(`/api/v1/jobs/${id}`, submitData);
-            setSuccess('Job updated successfully!');
+        setSubmitting(true);
+        setError(null);
 
+        try {
+            // Fixed: removed duplicate /api/v1 prefix
+            const response = await api.patch(`/jobs/${id}`, {
+                title: formData.title,
+                company: formData.company,
+                description: formData.description,
+                requirements: filteredRequirements,
+                location: formData.location,
+                type: formData.type,
+                salary: formData.salary || undefined,
+                totalSlots: parseInt(formData.totalSlots)
+            });
+
+            // Show success and redirect
             setTimeout(() => {
                 navigate('/recruiter/dashboard');
-            }, 2000);
+            }, 1500);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update job. Please try again.');
             console.error('Error updating job:', err);
-        } finally {
+            setError(err.response?.data?.message || 'Failed to update job posting. Please try again.');
             setSubmitting(false);
         }
     };
 
-    const hasDescriptionChanged = formData.description !== originalDescription;
-
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
+            <div className="flex justify-center items-center min-h-[400px]">
                 <Spinner />
             </div>
         );
@@ -146,10 +136,30 @@ const EditJobPage = () => {
 
     if (error && !job) {
         return (
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="container mx-auto px-4 py-8">
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                     {error}
-                    <button onClick={() => navigate('/recruiter/dashboard')} className="ml-4 underline">
+                    <button
+                        onClick={fetchJob}
+                        className="ml-4 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (user?.status === 'pending') {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
+                    <p className="font-bold">Account Pending Approval</p>
+                    <p>Your account is awaiting approval. You cannot edit job posts.</p>
+                    <button
+                        onClick={() => navigate('/recruiter/dashboard')}
+                        className="mt-3 bg-yellow-600 text-white px-4 py-2 rounded"
+                    >
                         Back to Dashboard
                     </button>
                 </div>
@@ -158,240 +168,177 @@ const EditJobPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Edit Job</h1>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Update your job posting details.
+        <div className="container mx-auto px-4 py-8 max-w-3xl">
+            <h1 className="text-3xl font-bold mb-6">Edit Job Post</h1>
+
+            {job && (
+                <div className="mb-4 p-3 bg-gray-100 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                        Current AI Category: <CategoryBadge category={job.category} />
+                    </p>
+                </div>
+            )}
+
+            {showCategoryWarning && (
+                <div className="mb-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded">
+                    <p className="text-sm">
+                        ⚠️ Note: Editing the job description will trigger AI re-classification.
+                        The category badge may change after you save.
+                    </p>
+                </div>
+            )}
+
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">Job Title *</label>
+                    <input
+                        type="text"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">Company Name *</label>
+                    <input
+                        type="text"
+                        name="company"
+                        value={formData.company}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">Job Description *</label>
+                    <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        required
+                        rows={6}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                        Editing description will trigger AI re-classification.
                     </p>
                 </div>
 
-                {/* Warning about AI reclassification (required by spec) */}
-                <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">Requirements *</label>
+                    {formData.requirements.map((req, index) => (
+                        <div key={index} className="flex gap-2 mb-2">
+                            <input
+                                type="text"
+                                value={req}
+                                onChange={(e) => handleRequirementChange(index, e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder={`Requirement ${index + 1}`}
+                            />
+                            {formData.requirements.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => removeRequirement(index)}
+                                    className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                                >
+                                    ✕
+                                </button>
+                            )}
                         </div>
-                        <div className="ml-3">
-                            <p className="text-sm text-blue-700">
-                                <strong>Note:</strong> Editing the description will re-trigger AI classification
-                                and may change the job category badge.
-                            </p>
-                        </div>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={addRequirement}
+                        className="text-blue-600 hover:text-blue-700 text-sm mt-1"
+                    >
+                        + Add Requirement
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label className="block text-gray-700 font-medium mb-2">Location *</label>
+                        <input
+                            type="text"
+                            name="location"
+                            value={formData.location}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-gray-700 font-medium mb-2">Job Type *</label>
+                        <select
+                            name="type"
+                            value={formData.type}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {jobTypes.map(type => (
+                                <option key={type} value={type}>
+                                    {type.replace('-', ' ').charAt(0).toUpperCase() + type.replace('-', ' ').slice(1)}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
-                {/* Current category display */}
-                {job && (
-                    <div className="mb-6 bg-white p-4 rounded-lg shadow">
-                        <p className="text-sm text-gray-600 mb-2">Current AI-assigned category:</p>
-                        <CategoryBadge category={job.category} />
-                        {hasDescriptionChanged && (
-                            <p className="mt-2 text-xs text-yellow-600">
-                                ⚠️ Description changed - category will be reclassified on save
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {error && (
-                    <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        {error}
-                    </div>
-                )}
-
-                {success && (
-                    <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        {success} Redirecting to dashboard...
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow sm:rounded-lg p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                            Job Title *
-                        </label>
-                        <input
-                            type="text"
-                            name="title"
-                            id="title"
-                            required
-                            value={formData.title}
-                            onChange={handleInputChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="company" className="block text-sm font-medium text-gray-700">
-                            Company Name *
-                        </label>
-                        <input
-                            type="text"
-                            name="company"
-                            id="company"
-                            required
-                            value={formData.company}
-                            onChange={handleInputChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                            Job Description *
-                        </label>
-                        <textarea
-                            name="description"
-                            id="description"
-                            rows="6"
-                            required
-                            value={formData.description}
-                            onChange={handleInputChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                            placeholder="Describe the role, responsibilities, and qualifications..."
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Requirements *
-                        </label>
-                        {formData.requirements.map((req, index) => (
-                            <div key={index} className="flex mb-2">
-                                <input
-                                    type="text"
-                                    value={req}
-                                    onChange={(e) => handleRequirementChange(index, e.target.value)}
-                                    placeholder={`Requirement ${index + 1}`}
-                                    className="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                />
-                                {formData.requirements.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => removeRequirement(index)}
-                                        className="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                                    >
-                                        Remove
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        <button
-                            type="button"
-                            onClick={addRequirement}
-                            className="mt-2 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                        >
-                            + Add Requirement
-                        </button>
-                    </div>
-
-                    <div>
-                        <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-                            Location *
-                        </label>
-                        <select
-                            name="location"
-                            id="location"
-                            required
-                            value={formData.location}
-                            onChange={handleInputChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        >
-                            <option value="">Select a location</option>
-                            {locations.map(loc => (
-                                <option key={loc} value={loc}>{loc}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-                            Job Type *
-                        </label>
-                        <select
-                            name="type"
-                            id="type"
-                            required
-                            value={formData.type}
-                            onChange={handleInputChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        >
-                            {jobTypes.map(type => (
-                                <option key={type} value={type}>{type.replace('-', ' ').toUpperCase()}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label htmlFor="salary" className="block text-sm font-medium text-gray-700">
-                            Salary (optional)
-                        </label>
+                        <label className="block text-gray-700 font-medium mb-2">Salary (Optional)</label>
                         <input
                             type="text"
                             name="salary"
-                            id="salary"
                             value={formData.salary}
-                            onChange={handleInputChange}
-                            placeholder="e.g., $80,000 - $100,000"
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
 
                     <div>
-                        <label htmlFor="totalSlots" className="block text-sm font-medium text-gray-700">
-                            Total Slots *
-                        </label>
+                        <label className="block text-gray-700 font-medium mb-2">Total Slots *</label>
                         <input
                             type="number"
                             name="totalSlots"
-                            id="totalSlots"
-                            required
-                            min="1"
                             value={formData.totalSlots}
-                            onChange={handleInputChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            onChange={handleChange}
+                            min="1"
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
+                </div>
 
-                    <div>
-                        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                            Job Status
-                        </label>
-                        <select
-                            name="status"
-                            id="status"
-                            value={formData.status}
-                            onChange={handleInputChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        >
-                            {jobStatuses.map(status => (
-                                <option key={status} value={status}>{status.toUpperCase()}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="pt-4 flex space-x-3">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/recruiter/dashboard')}
-                            className="flex-1 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {submitting ? <Spinner /> : 'Update Job'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div className="flex gap-4 mt-6">
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition"
+                    >
+                        {submitting ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/recruiter/dashboard')}
+                        className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     );
 };
