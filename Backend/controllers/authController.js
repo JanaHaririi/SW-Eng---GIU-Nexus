@@ -107,7 +107,9 @@ exports.login = async (req, res, next) => {
             });
         }
 
-        if (user.recruiterStatus !== 'approved') {
+        // Only recruiter accounts are subject to the admin-approval gate.
+        // Admins and job seekers log in regardless of their recruiterStatus.
+        if (user.role === 'recruiter' && user.recruiterStatus !== 'approved') {
             return res.status(403).json({
                 success: false,
                 message: 'Account pending admin approval.'
