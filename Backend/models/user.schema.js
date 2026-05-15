@@ -67,12 +67,7 @@ const userSchema = new mongoose.Schema({
   // Password Reset
   resetPasswordToken: String,
 
-  resetPasswordExpire: Date,
-
-  // OTP for password-reset verification
-  otp: String,
-
-  otpExpiry: Date
+  resetPasswordExpire: Date
 
 }, { timestamps: true });
 

@@ -39,6 +39,13 @@ exports.protect = async (req, res, next) => {
             });
         }
 
+        if (user.recruiterStatus !== 'approved') {
+            return res.status(403).json({
+                success: false,
+                message: 'Account pending admin approval.'
+            });
+        }
+
         user.jti = decoded.jti;
         req.user = user;
         next();
