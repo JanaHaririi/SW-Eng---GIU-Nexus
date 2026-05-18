@@ -1,9 +1,21 @@
-// Frontend/src/pages/recruiter/applicantsPage.jsx
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Spinner from '../../components/spinner';
 import ApplicationStatusBadge from '../../components/applicationStatusBadge';
+import Skeleton from '../../components/skeleton';
+import {
+    getJobApplicants,
+    updateApplicationStatus,
+} from '../../services/applicationService';
+import { formatDate, pluralize } from '../../utils/formatters';
+
+const STATUS_OPTIONS = [
+    { value: '', label: 'All statuses' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'shortlisted', label: 'Shortlisted' },
+    { value: 'accepted', label: 'Accepted' },
+    { value: 'rejected', label: 'Rejected' },
+];
 
 const ApplicantsPage = () => {
     const { jobId } = useParams();
@@ -13,53 +25,76 @@ const ApplicantsPage = () => {
     const [applicants, setApplicants] = useState([]);
     const [updatingStatus, setUpdatingStatus] = useState(null);
     const [error, setError] = useState(null);
+    const [status, setStatus] = useState('');
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [selectedCoverLetter, setSelectedCoverLetter] = useState(null);
+
+    const limit = 10;
+    const totalPages = useMemo(
+        () => Math.max(Math.ceil(total / limit), 1),
+        [total]
+    );
 
     useEffect(() => {
         fetchJobAndApplicants();
-    }, [jobId]);
+    }, [jobId, status, page]);
 
     const fetchJobAndApplicants = async () => {
         setLoading(true);
         try {
-            // Fetch job details
-            const jobResponse = await api.get(`/jobs/${jobId}`);
-            setJob(jobResponse.data.data);
+            const data = await getJobApplicants(jobId, { status, page, limit });
 
-            // Fetch applicants for this job
-            const applicantsResponse = await api.get(`/jobs/${jobId}/applicants`);
-            setApplicants(applicantsResponse.data.data || []);
+            setJob(data.job || null);
+            setApplicants(data.applicants || data.applications || data.data || []);
+            setTotal(data.total || 0);
             setError(null);
         } catch (err) {
             console.error('Error fetching applicants:', err);
-            setError('Failed to load applicants. Please try again.');
+            setError(
+                err.response?.data?.message ||
+                'Failed to load applicants. Please try again.'
+            );
         } finally {
             setLoading(false);
         }
     };
 
-    const updateApplicationStatus = async (applicationId, newStatus) => {
+    const handleStatusUpdate = async (applicationId, newStatus) => {
         setUpdatingStatus(applicationId);
         try {
-            await api.patch(`/applications/${applicationId}/status`, { status: newStatus });
+            const data = await updateApplicationStatus(applicationId, newStatus);
+            const updatedApplication = data.application;
 
-            // Update local state
             setApplicants(prev => prev.map(app =>
                 app._id === applicationId
-                    ? { ...app, status: newStatus }
+                    ? { ...app, ...(updatedApplication || {}), status: newStatus }
                     : app
             ));
         } catch (err) {
             console.error('Error updating status:', err);
-            alert('Failed to update application status. Please try again.');
+            setError(
+                err.response?.data?.message ||
+                'Failed to update application status. Please try again.'
+            );
         } finally {
             setUpdatingStatus(null);
         }
     };
 
+    const handleFilterChange = (event) => {
+        setStatus(event.target.value);
+        setPage(1);
+    };
+
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-[400px]">
-                <Spinner />
+            <div className="mx-auto max-w-6xl px-4 py-8">
+                <div className="mb-6 flex items-center gap-3">
+                    <Spinner />
+                    <span className="text-sm text-slate-600">Loading applicants...</span>
+                </div>
+                <Skeleton className="h-24 w-full" rows={4} />
             </div>
         );
     }
@@ -81,128 +116,211 @@ const ApplicantsPage = () => {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="mx-auto max-w-6xl px-4 py-8">
             <button
-                onClick={() => navigate('/recruiter/dashboard')}
-                className="mb-4 text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                type="button"
+                onClick={() => navigate('/recruiter')}
+                className="mb-4 text-sm font-medium text-blue-600 hover:text-blue-700"
             >
-                ← Back to Dashboard
+                Back to Dashboard
             </button>
 
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold">{job?.title}</h1>
-                <p className="text-gray-600">{job?.company} • {job?.location}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                    Total Applicants: {applicants.length}
-                </p>
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900">
+                        {job?.title || 'Job Applicants'}
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-600">
+                        {job?.company || 'Company not listed'} - {job?.location || 'Location not listed'}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        {pluralize(total || applicants.length, 'applicant')}
+                    </p>
+                </div>
+
+                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+                    Filter by status
+                    <select
+                        value={status}
+                        onChange={handleFilterChange}
+                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                        {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
             </div>
 
             {applicants.length === 0 ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                    <p className="text-gray-600">No applicants have applied for this position yet.</p>
+                <div className="rounded-md border border-slate-200 bg-white p-8 text-center">
+                    <p className="text-slate-600">
+                        {status
+                            ? 'No applicants match the selected status.'
+                            : 'No applicants have applied for this position yet.'}
+                    </p>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                <div className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                                 Applicant
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                                 Skills
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                                 Applied On
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                                 Status
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                                 Cover Letter
                             </th>
                         </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {applicants.map((application) => (
-                            <tr key={application._id} className="hover:bg-gray-50">
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                        {applicants.map((application) => {
+                            const applicant = application.user || application.applicant || {};
+                            const skills = applicant.extractedSkills || applicant.skills || [];
+
+                            return (
+                            <tr key={application._id} className="hover:bg-slate-50">
                                 <td className="px-6 py-4">
                                     <div>
-                                        <div className="font-medium text-gray-900">
-                                            {application.applicant?.name || 'Unknown'}
+                                        <div className="font-medium text-slate-900">
+                                            {applicant.username || applicant.name || 'Unknown applicant'}
                                         </div>
-                                        <div className="text-sm text-gray-500">
-                                            {application.applicant?.email}
+                                        <div className="text-sm text-slate-500">
+                                            {applicant.email || 'No email provided'}
                                         </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <div className="flex flex-wrap gap-1">
-                                        {application.applicant?.skills?.slice(0, 3).map((skill, idx) => (
+                                    {skills.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1">
+                                            {skills.slice(0, 3).map((skill) => (
                                             <span
-                                                key={idx}
-                                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                                key={skill}
+                                                className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700"
                                             >
-                          {skill}
-                        </span>
-                                        ))}
-                                        {application.applicant?.skills?.length > 3 && (
-                                            <span className="text-xs text-gray-500">
-                          +{application.applicant.skills.length - 3} more
-                        </span>
-                                        )}
-                                    </div>
+                                                {skill}
+                                            </span>
+                                            ))}
+                                            {skills.length > 3 && (
+                                                <span className="text-xs text-slate-500">
+                                                    +{skills.length - 3} more
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="text-sm text-slate-400">No skills listed</span>
+                                    )}
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-500">
-                                    {new Date(application.createdAt).toLocaleDateString()}
+                                <td className="px-6 py-4 text-sm text-slate-500">
+                                    {formatDate(application.appliedAt || application.createdAt)}
                                 </td>
                                 <td className="px-6 py-4">
+                                    <div className="flex flex-col gap-2">
+                                        <ApplicationStatusBadge status={application.status} />
                                     <select
                                         value={application.status}
-                                        onChange={(e) => updateApplicationStatus(application._id, e.target.value)}
+                                            onChange={(e) => handleStatusUpdate(application._id, e.target.value)}
                                         disabled={updatingStatus === application._id}
-                                        className={`px-2 py-1 text-sm rounded border ${
-                                            application.status === 'pending' ? 'border-yellow-400 bg-yellow-50' :
-                                                application.status === 'shortlisted' ? 'border-green-400 bg-green-50' :
-                                                    'border-red-400 bg-red-50'
-                                        }`}
+                                            className="w-36 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         <option value="pending">Pending</option>
                                         <option value="shortlisted">Shortlisted</option>
+                                            <option value="accepted">Accepted</option>
                                         <option value="rejected">Rejected</option>
                                     </select>
                                     {updatingStatus === application._id && (
-                                        <span className="ml-2 text-xs text-gray-400">Updating...</span>
+                                            <span className="text-xs text-slate-400">Updating...</span>
                                     )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
                                     {application.coverLetter ? (
                                         <button
-                                            onClick={() => {
-                                                const modal = document.createElement('div');
-                                                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                                                modal.innerHTML = `
-                            <div class="bg-white rounded-lg p-6 max-w-lg max-h-96 overflow-auto">
-                              <h3 class="font-bold mb-2">Cover Letter</h3>
-                              <p class="text-gray-700 whitespace-pre-wrap">${application.coverLetter}</p>
-                              <button class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Close</button>
-                            </div>
-                          `;
-                                                document.body.appendChild(modal);
-                                                modal.querySelector('button').onclick = () => modal.remove();
-                                            }}
-                                            className="text-blue-600 hover:text-blue-700 text-sm"
+                                            type="button"
+                                            onClick={() => setSelectedCoverLetter({
+                                                applicantName:
+                                                    applicant.username || applicant.name || 'Applicant',
+                                                text: application.coverLetter,
+                                            })}
+                                            className="text-sm font-medium text-blue-600 hover:text-blue-700"
                                         >
                                             View Letter
                                         </button>
                                     ) : (
-                                        <span className="text-gray-400 text-sm">No cover letter</span>
+                                        <span className="text-sm text-slate-400">No cover letter</span>
                                     )}
                                 </td>
                             </tr>
-                        ))}
+                            );
+                        })}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {applicants.length > 0 && (
+                <div className="mt-5 flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => setPage((currentPage) => Math.max(currentPage - 1, 1))}
+                        disabled={page === 1}
+                        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Previous
+                    </button>
+
+                    <span className="text-sm text-slate-600">
+                        Page {page} of {totalPages}
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setPage((currentPage) => Math.min(currentPage + 1, totalPages))
+                        }
+                        disabled={page >= totalPages}
+                        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+
+            {selectedCoverLetter && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
+                    <div className="max-h-[80vh] w-full max-w-xl overflow-auto rounded-md bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-semibold text-slate-900">
+                                    Cover Letter
+                                </h2>
+                                <p className="text-sm text-slate-500">
+                                    {selectedCoverLetter.applicantName}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedCoverLetter(null)}
+                                className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                            {selectedCoverLetter.text}
+                        </p>
+                    </div>
                 </div>
             )}
         </div>

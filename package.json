@@ -4,6 +4,9 @@
   "description": "GIU Nexus is an AI-powered full-stack web application that helps university students find internships and jobs while giving recruiters a smarter, faster way to discover the right candidates.",
   "main": "server.js",
   "scripts": {
+    "build": "npm --prefix Frontend run build",
+    "frontend:dev": "npm --prefix Frontend run dev",
+    "frontend:preview": "npm --prefix Frontend run preview",
     "test": "jest --runInBand",
     "start": "node Backend/server.js",
     "dev": "nodemon Backend/server.js"

@@ -1,0 +1,19 @@
+const Spinner = ({ size = 'md', label = 'Loading' }) => {
+  const sizeClasses = {
+    sm: 'h-4 w-4 border-2',
+    md: 'h-8 w-8 border-2',
+    lg: 'h-12 w-12 border-4',
+  };
+
+  return (
+    <div className="inline-flex items-center gap-3 text-slate-600" role="status">
+      <span
+        className={`${sizeClasses[size] || sizeClasses.md} inline-block animate-spin rounded-full border-slate-200 border-t-blue-600`}
+        aria-hidden="true"
+      />
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+};
+
+export default Spinner;
