@@ -24,3 +24,8 @@ export const applyToJob = async (id, data) => {
   const response = await api.post(`/jobs/${id}/apply`, data);
   return response.data;
 };
+
+export const getRecommendedJobs = async () => {
+  const response = await api.get("/jobs/recommended");
+  return response.data;
+};
