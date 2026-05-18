@@ -6,12 +6,25 @@ const Spinner = ({ size = 'md', label = 'Loading' }) => {
   };
 
   return (
-    <div className="inline-flex items-center gap-3 text-slate-600" role="status">
+    <div
+      className="flex items-center justify-center p-4"
+      role="status"
+    >
       <span
-        className={`${sizeClasses[size] || sizeClasses.md} inline-block animate-spin rounded-full border-slate-200 border-t-blue-600`}
+        className={`
+          ${sizeClasses[size] || sizeClasses.md}
+          inline-block
+          animate-spin
+          rounded-full
+          border-slate-200
+          border-t-blue-600
+        `}
         aria-hidden="true"
       />
-      <span className="sr-only">{label}</span>
+
+      <span className="sr-only">
+        {label}
+      </span>
     </div>
   );
 };
