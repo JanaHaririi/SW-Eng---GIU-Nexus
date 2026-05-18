@@ -12,6 +12,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 
 import PendingRecruitersPage from "./pages/admin/PendingRecruitersPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminApplicationsPage from "./pages/admin/adminApplicationsPage";
 
 import RecruiterDashboard from './pages/recruiter/recruiterDashboard.jsx';
 import CreateJobPage from './pages/recruiter/createJobPage.jsx';
@@ -151,14 +152,19 @@ export default function App() {
             />
 
             <Route
+              path="/admin/users/:id"
+              element={<ComingSoon owner="TBD" name="Admin User Profile" />}
+            />
+
+            <Route
              path="/admin/pending-recruiters"
              element={<PendingRecruitersPage />}
             />
 
             <Route
-             path="/admin/jobs"
-             element={<ComingSoon owner="AI Logic" name="Admin Jobs" />}
-           />
+              path="/admin/applications"
+              element={<AdminApplicationsPage />}
+            />
           </Route>
 
           <Route path="*" element={<NotFound />} />

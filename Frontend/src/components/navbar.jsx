@@ -71,8 +71,8 @@ export default function Navbar() {
               <NavLink to="/admin/pending-recruiters" className={navLinkClass}>
                 Pending
               </NavLink>
-              <NavLink to="/admin/jobs" className={navLinkClass}>
-                Jobs
+              <NavLink to="/admin/applications" className={navLinkClass}>
+                Applications
               </NavLink>
             </>
           )}

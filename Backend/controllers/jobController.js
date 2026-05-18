@@ -424,11 +424,27 @@ exports.getMyJobs = async (req, res, next) => {
   try {
     const jobs = await JobPost.find({
       createdBy: req.user._id
-    });
+    }).lean();
+
+    const jobIds = jobs.map((j) => j._id);
+
+    const counts = await Application.aggregate([
+      { $match: { job: { $in: jobIds } } },
+      { $group: { _id: '$job', count: { $sum: 1 } } }
+    ]);
+
+    const countByJob = new Map(
+      counts.map((c) => [c._id.toString(), c.count])
+    );
+
+    const jobsWithCount = jobs.map((j) => ({
+      ...j,
+      applicantCount: countByJob.get(j._id.toString()) || 0
+    }));
 
     res.status(200).json({
       success: true,
-      jobs
+      jobs: jobsWithCount
     });
   } catch (err) {
     next(err);
