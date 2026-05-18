@@ -18,6 +18,9 @@ import CreateJobPage from './pages/recruiter/createJobPage.jsx';
 import EditJobPage from './pages/recruiter/editJobPage.jsx';
 import ApplicantsPage from './pages/recruiter/applicantsPage.jsx';
 import MyApplicationsPage from './pages/myApplicationsPage.jsx';
+import JobListPage from './pages/jobListPage.jsx';
+import JobDetailPage from './pages/jobDetailPage.jsx';
+import SavedJobsPage from './pages/savedJobsPage.jsx';
 // Teammate-owned pages plug in here as they're built.
 // To wire a real page: replace the matching <ComingSoon ... /> below with
 // the page component and add its import above.
@@ -73,11 +76,11 @@ export default function App() {
           {/* Public — Search */}
           <Route
             path="/jobs"
-            element={<ComingSoon owner="Search" name="Job List" />}
+            element={<JobListPage />}
           />
           <Route
             path="/jobs/:id"
-            element={<ComingSoon owner="Search" name="Job Detail" />}
+            element={<JobDetailPage />}
           />
 
           {/* Authenticated — any role */}
@@ -100,8 +103,8 @@ export default function App() {
           {/* Job seeker only */}
           <Route element={<RoleRoute allow={['jobSeeker']} />}>
             <Route
-              path="/saved"
-              element={<ComingSoon owner="Search" name="Saved Jobs" />}
+             path="/saved"
+             element={<SavedJobsPage />}
             />
             <Route
               path="/applications"
