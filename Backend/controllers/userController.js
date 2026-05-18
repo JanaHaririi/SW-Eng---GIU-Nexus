@@ -7,16 +7,34 @@ const getUsers = async (req, res, next) => {
     try {
         const { role, status, page = 1, limit = 20 } = req.query;
 
-        // Build filter object
+        // Build filter object. recruiterStatus only carries meaning for
+        // recruiter accounts; job seekers and admins are implicitly approved.
         const filter = {};
         if (role) filter.role = role;
-        if (status) filter.status = status;
 
-        // Calculate pagination
+        if (status === 'approved') {
+            filter.$or = [
+                { recruiterStatus: 'approved' },
+                { role: { $ne: 'recruiter' } }
+            ];
+        } else if (status === 'pending' || status === 'rejected') {
+            filter.recruiterStatus = status;
+            if (!role) {
+                filter.role = 'recruiter';
+            } else if (role !== 'recruiter') {
+                // Non-recruiters can't be pending/rejected — short-circuit.
+                return res.status(200).json({
+                    success: true,
+                    total: 0,
+                    page: parseInt(page),
+                    users: []
+                });
+            }
+        }
+
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const limitNum = parseInt(limit);
 
-        // Execute queries in parallel
         const [users, total] = await Promise.all([
             User.find(filter)
                 .select('-password')
@@ -26,11 +44,20 @@ const getUsers = async (req, res, next) => {
             User.countDocuments(filter)
         ]);
 
+        // Expose a unified `status` field so clients don't need to know that
+        // it lives under `recruiterStatus` in the schema. Non-recruiters are
+        // always reported as approved, matching how login treats them.
+        const usersWithStatus = users.map((user) => {
+            const obj = user.toObject();
+            obj.status = user.role === 'recruiter' ? user.recruiterStatus : 'approved';
+            return obj;
+        });
+
         res.status(200).json({
             success: true,
             total,
             page: parseInt(page),
-            users
+            users: usersWithStatus
         });
     } catch (error) {
         next(error);
@@ -84,22 +111,33 @@ const updateUserStatus = async (req, res, next) => {
             });
         }
 
-        const user = await User.findByIdAndUpdate(
-            id,
-            { recruiterStatus: status },
-            { new: true, runValidators: true }
-        ).select('-password');
-
-        if (!user) {
+        const existing = await User.findById(id).select('role');
+        if (!existing) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
             });
         }
 
+        if (existing.role !== 'recruiter') {
+            return res.status(400).json({
+                success: false,
+                message: 'Only recruiter accounts have an approval status.'
+            });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            id,
+            { recruiterStatus: status },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        const userObj = user.toObject();
+        userObj.status = user.recruiterStatus;
+
         res.status(200).json({
             success: true,
-            user
+            user: userObj
         });
     } catch (error) {
         if (error.name === 'CastError') {

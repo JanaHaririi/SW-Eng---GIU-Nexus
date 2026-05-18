@@ -187,17 +187,21 @@ const AdminUsersPage = () => {
                     </span>
                   </td>
                   <td>
-                    <select
-                      value={user.status || ""}
-                      onChange={(event) =>
-                        handleStatusChange(user._id, event.target.value)
-                      }
-                      disabled={actionLoadingId === user._id}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
+                    {user.role === "recruiter" ? (
+                      <select
+                        value={user.status || ""}
+                        onChange={(event) =>
+                          handleStatusChange(user._id, event.target.value)
+                        }
+                        disabled={actionLoadingId === user._id}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
                   </td>
                   <td>
                     <button
