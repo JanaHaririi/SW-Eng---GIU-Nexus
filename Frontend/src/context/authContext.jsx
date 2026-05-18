@@ -9,7 +9,7 @@ import {
 import { registerUnauthorizedHandler } from '../services/api';
 import * as authService from '../services/authService';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setTokenState] = useState(() => getToken());

@@ -38,7 +38,7 @@ const EditJobPage = () => {
         try {
             // Fixed: removed duplicate /api/v1 prefix
             const response = await api.get(`/jobs/${id}`);
-            const jobData = response.data.data;
+            const jobData = response.data.job;
             setJob(jobData);
             setFormData({
                 title: jobData.title || '',
@@ -117,7 +117,7 @@ const EditJobPage = () => {
 
             // Show success and redirect
             setTimeout(() => {
-                navigate('/recruiter/dashboard');
+                navigate('/recruiter');
             }, 1500);
         } catch (err) {
             console.error('Error updating job:', err);
@@ -157,7 +157,7 @@ const EditJobPage = () => {
                     <p className="font-bold">Account Pending Approval</p>
                     <p>Your account is awaiting approval. You cannot edit job posts.</p>
                     <button
-                        onClick={() => navigate('/recruiter/dashboard')}
+                        onClick={() => navigate('/recruiter')}
                         className="mt-3 bg-yellow-600 text-white px-4 py-2 rounded"
                     >
                         Back to Dashboard
@@ -332,7 +332,7 @@ const EditJobPage = () => {
                     </button>
                     <button
                         type="button"
-                        onClick={() => navigate('/recruiter/dashboard')}
+                        onClick={() => navigate('/recruiter')}
                         className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition"
                     >
                         Cancel

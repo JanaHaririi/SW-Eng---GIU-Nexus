@@ -21,7 +21,7 @@ const RecruiterDashboard = () => {
         try {
             // Fixed: removed duplicate /api/v1 prefix
             const response = await api.get('/jobs/my-jobs');
-            setJobs(response.data.data || []);
+            setJobs(response.data.jobs || []);
             setError(null);
         } catch (err) {
             console.error('Error fetching jobs:', err);
@@ -78,7 +78,7 @@ const RecruiterDashboard = () => {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Recruiter Dashboard</h1>
                 <Link
-                    to="/recruiter/jobs/create"
+                    to="/recruiter/jobs/new"
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                 >
                     + Post New Job
@@ -91,7 +91,7 @@ const RecruiterDashboard = () => {
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
                         <p className="text-gray-600 mb-4">You haven't posted any jobs yet.</p>
                         <Link
-                            to="/recruiter/jobs/create"
+                            to="/recruiter/jobs/new"
                             className="text-blue-600 hover:text-blue-700 font-medium"
                         >
                             Create your first job posting →

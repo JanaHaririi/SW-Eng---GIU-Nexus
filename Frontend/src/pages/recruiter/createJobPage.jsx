@@ -75,11 +75,11 @@ const CreateJobPage = () => {
                 totalSlots: parseInt(formData.totalSlots)
             });
 
-            setCreatedJob(response.data.data);
+            setCreatedJob(response.data.job);
 
             // Redirect after 2 seconds
             setTimeout(() => {
-                navigate('/recruiter/dashboard');
+                navigate('/recruiter');
             }, 2000);
         } catch (err) {
             console.error('Error creating job:', err);
@@ -100,7 +100,7 @@ const CreateJobPage = () => {
                         You cannot post jobs until your account is approved.
                     </p>
                     <button
-                        onClick={() => navigate('/recruiter/dashboard')}
+                        onClick={() => navigate('/recruiter')}
                         className="mt-3 bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700"
                     >
                         Back to Dashboard
@@ -126,7 +126,7 @@ const CreateJobPage = () => {
                         <CategoryBadge category={createdJob.category} />
                     </div>
                     <button
-                        onClick={() => navigate('/recruiter/dashboard')}
+                        onClick={() => navigate('/recruiter')}
                         className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                     >
                         Go to Dashboard
@@ -289,7 +289,7 @@ const CreateJobPage = () => {
                     </button>
                     <button
                         type="button"
-                        onClick={() => navigate('/recruiter/dashboard')}
+                        onClick={() => navigate('/recruiter')}
                         className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition"
                     >
                         Cancel

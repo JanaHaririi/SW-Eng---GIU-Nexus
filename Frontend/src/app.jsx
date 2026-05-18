@@ -12,6 +12,12 @@ import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 
 import PendingRecruitersPage from "./pages/admin/PendingRecruitersPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
+
+import RecruiterDashboard from './pages/recruiter/recruiterDashboard.jsx';
+import CreateJobPage from './pages/recruiter/createJobPage.jsx';
+import EditJobPage from './pages/recruiter/editJobPage.jsx';
+import ApplicantsPage from './pages/recruiter/applicantsPage.jsx';
+import MyApplicationsPage from './pages/myApplicationsPage.jsx';
 // Teammate-owned pages plug in here as they're built.
 // To wire a real page: replace the matching <ComingSoon ... /> below with
 // the page component and add its import above.
@@ -99,7 +105,7 @@ export default function App() {
             />
             <Route
               path="/applications"
-              element={<ComingSoon owner="Workflow" name="My Applications" />}
+              element={<MyApplicationsPage />}
             />
             <Route
               path="/recommended"
@@ -113,21 +119,19 @@ export default function App() {
           <Route element={<RoleRoute allow={['recruiter']} />}>
             <Route
               path="/recruiter"
-              element={
-                <ComingSoon owner="Recruiter" name="Recruiter Dashboard" />
-              }
+              element={<RecruiterDashboard />}
             />
             <Route
               path="/recruiter/jobs/new"
-              element={<ComingSoon owner="Recruiter" name="Create Job" />}
+              element={<CreateJobPage />}
             />
             <Route
               path="/recruiter/jobs/:id/edit"
-              element={<ComingSoon owner="Recruiter" name="Edit Job" />}
+              element={<EditJobPage />}
             />
             <Route
               path="/recruiter/jobs/:jobId/applicants"
-              element={<ComingSoon owner="Workflow" name="Applicants" />}
+              element={<ApplicantsPage />}
             />
           </Route>
 
