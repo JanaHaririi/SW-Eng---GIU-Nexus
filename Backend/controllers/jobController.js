@@ -34,6 +34,7 @@ exports.getJobs = async (req, res, next) => {
     if (status) query.status = status;
 
     const jobs = await JobPost.find(query)
+      .populate('createdBy', 'username')
       .skip((page - 1) * limit)
       .limit(Number(limit));
 

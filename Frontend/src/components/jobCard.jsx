@@ -14,7 +14,7 @@ export default function JobCard({ job, onSaveToggle }) {
           </h2>
 
           <p className="mt-1 text-sm text-slate-600">
-            {job.company}
+            by {job.createdBy?.username || "Unknown recruiter"}
           </p>
         </div>
 

@@ -91,6 +91,10 @@ export default function JobDetailPage() {
               {job.title}
             </h1>
 
+            <p className="mt-1 text-sm text-slate-500">
+              Posted by {job.createdBy?.username || "Unknown recruiter"}
+            </p>
+
             <p className="mt-2 text-lg text-slate-600">
               {job.company}
             </p>
