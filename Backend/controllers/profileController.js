@@ -113,7 +113,7 @@ const getProfile = async (req, res, next) => {
 // PATCH /api/v1/profile
 const updateProfile = async (req, res, next) => {
   try {
-    const allowedFields = ['name', 'bio', 'profilePicture'];
+    const allowedFields = ['username', 'bio', 'profilePicture'];
     const updates = {};
 
     allowedFields.forEach((field) => {
