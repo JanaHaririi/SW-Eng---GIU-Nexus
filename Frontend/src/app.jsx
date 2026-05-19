@@ -6,13 +6,13 @@ import RoleRoute from './components/roleRoute.jsx';
 
 import LoginPage from './pages/loginPage.jsx';
 import RegisterPage from './pages/registerPage.jsx';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
-import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
-import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
+import ForgotPasswordPage from './pages/forgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/resetPasswordPage.jsx';
+import ChangePasswordPage from './pages/changePasswordPage.jsx';
 
-import PendingRecruitersPage from "./pages/admin/PendingRecruitersPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminApplicationsPage from "./pages/admin/adminApplicationsPage";
+import PendingRecruitersPage from './pages/admin/pendingRecruitersPage.jsx';
+import AdminUsersPage from './pages/admin/adminUsersPage.jsx';
+import AdminApplicationsPage from './pages/admin/adminApplicationsPage.jsx';
 
 import RecruiterDashboard from './pages/recruiter/recruiterDashboard.jsx';
 import CreateJobPage from './pages/recruiter/createJobPage.jsx';
@@ -25,14 +25,14 @@ import JobListPage from './pages/jobListPage.jsx';
 import JobDetailPage from './pages/jobDetailPage.jsx';
 import SavedJobsPage from './pages/savedJobsPage.jsx';
 
-/* =========================
-   AI LOGIC PAGES
-========================= */
-import HomePage from './pages/HomePage.jsx';
-import RecommendedJobsPage from './pages/RecommendedJobsPage.jsx';
+import ProfilePage from './pages/profilePage.jsx';
+import EditProfilePage from './pages/editProfilePage.jsx';
 
-import AdminDashboard from './pages/admin/AdminDashboard.jsx';
-import AdminJobsPage from './pages/admin/AdminJobsPage.jsx';
+import HomePage from './pages/homePage.jsx';
+import RecommendedJobsPage from './pages/recommendedJobsPage.jsx';
+
+import AdminDashboard from './pages/admin/adminDashboard.jsx';
+import AdminJobsPage from './pages/admin/adminJobsPage.jsx';
 
 function NotFound() {
   return (
@@ -55,71 +55,34 @@ export default function App() {
 
       <main className="flex-1">
         <Routes>
-
           {/* =========================
               PUBLIC ROUTES
           ========================= */}
 
-          {/* AI Logic */}
-          <Route
-            path="/"
-            element={<HomePage />}
-          />
+          <Route path="/" element={<HomePage />} />
 
-          {/* Team Lead */}
-          <Route
-            path="/login"
-            element={<LoginPage />}
-          />
+          <Route path="/login" element={<LoginPage />} />
 
-          {/* Security */}
-          <Route
-            path="/register"
-            element={<RegisterPage />}
-          />
+          <Route path="/register" element={<RegisterPage />} />
 
-          <Route
-            path="/forgot-password"
-            element={<ForgotPasswordPage />}
-          />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-          <Route
-            path="/reset-password/:token"
-            element={<ResetPasswordPage />}
-          />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-          {/* Search */}
-          <Route
-            path="/jobs"
-            element={<JobListPage />}
-          />
+          <Route path="/jobs" element={<JobListPage />} />
 
-          <Route
-            path="/jobs/:id"
-            element={<JobDetailPage />}
-          />
+          <Route path="/jobs/:id" element={<JobDetailPage />} />
 
           {/* =========================
               AUTHENTICATED ROUTES
           ========================= */}
 
           <Route element={<PrivateRoute />}>
+            <Route path="/change-password" element={<ChangePasswordPage />} />
 
-            <Route
-              path="/change-password"
-              element={<ChangePasswordPage />}
-            />
+            <Route path="/profile" element={<ProfilePage />} />
 
-            <Route
-              path="/profile"
-              element={<div>Profile Page Coming Soon</div>}
-            />
-
-            <Route
-              path="/profile/edit"
-              element={<div>Edit Profile Coming Soon</div>}
-            />
-
+            <Route path="/profile/edit" element={<EditProfilePage />} />
           </Route>
 
           {/* =========================
@@ -127,22 +90,11 @@ export default function App() {
           ========================= */}
 
           <Route element={<RoleRoute allow={['jobSeeker']} />}>
+            <Route path="/saved" element={<SavedJobsPage />} />
 
-            <Route
-              path="/saved"
-              element={<SavedJobsPage />}
-            />
+            <Route path="/applications" element={<MyApplicationsPage />} />
 
-            <Route
-              path="/applications"
-              element={<MyApplicationsPage />}
-            />
-
-            <Route
-              path="/recommended"
-              element={<RecommendedJobsPage />}
-            />
-
+            <Route path="/recommended" element={<RecommendedJobsPage />} />
           </Route>
 
           {/* =========================
@@ -150,27 +102,16 @@ export default function App() {
           ========================= */}
 
           <Route element={<RoleRoute allow={['recruiter']} />}>
+            <Route path="/recruiter" element={<RecruiterDashboard />} />
 
-            <Route
-              path="/recruiter"
-              element={<RecruiterDashboard />}
-            />
+            <Route path="/recruiter/jobs/new" element={<CreateJobPage />} />
 
-            <Route
-              path="/recruiter/jobs/new"
-              element={<CreateJobPage />}
-            />
-
-            <Route
-              path="/recruiter/jobs/:id/edit"
-              element={<EditJobPage />}
-            />
+            <Route path="/recruiter/jobs/:id/edit" element={<EditJobPage />} />
 
             <Route
               path="/recruiter/jobs/:jobId/applicants"
               element={<ApplicantsPage />}
             />
-
           </Route>
 
           {/* =========================
@@ -178,21 +119,11 @@ export default function App() {
           ========================= */}
 
           <Route element={<RoleRoute allow={['admin']} />}>
+            <Route path="/admin" element={<AdminDashboard />} />
 
-            <Route
-              path="/admin"
-              element={<AdminDashboard />}
-            />
+            <Route path="/admin/jobs" element={<AdminJobsPage />} />
 
-            <Route
-              path="/admin/jobs"
-              element={<AdminJobsPage />}
-            />
-
-            <Route
-              path="/admin/users"
-              element={<AdminUsersPage />}
-            />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
 
             <Route
               path="/admin/users/:id"
@@ -208,18 +139,13 @@ export default function App() {
               path="/admin/applications"
               element={<AdminApplicationsPage />}
             />
-
           </Route>
 
           {/* =========================
               404
           ========================= */}
 
-          <Route
-            path="*"
-            element={<NotFound />}
-          />
-
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 

@@ -1,9 +1,14 @@
-// Minimal fallback stub. Replace with the real implementation in the Profile team's PR.
+import { categoryColors } from '../utils/categoryColors';
+
 export default function CategoryBadge({ category }) {
-  if (!category) return null;
+  const badgeColor = categoryColors[category] || categoryColors.Other;
+
   return (
-    <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-      {category}
+    <span
+      className="category-badge"
+      style={{ backgroundColor: badgeColor }}
+    >
+      {category || 'Other'}
     </span>
   );
 }
