@@ -1,13 +1,41 @@
 import { Link } from "react-router-dom";
 import CategoryBadge from "./categoryBadge";
 import SaveJobButton from "./saveJobButton";
+import { useAuth } from "../context/authContext";
+import { deleteJob } from "../services/jobService";
 
 export default function JobCard({
   job,
   onSaveToggle,
+  onDelete,
   showScore = false,
 }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   if (!job) return null;
+
+  const ownerId =
+    job.createdBy && typeof job.createdBy === "object"
+      ? job.createdBy._id
+      : job.createdBy;
+  const isOwner =
+    user?._id && ownerId && String(ownerId) === String(user._id);
+  const canDelete = isAdmin || (user?.role === "recruiter" && isOwner);
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete "${job.title}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteJob(job._id);
+      onDelete?.(job._id);
+    } catch (err) {
+      console.error(err);
+      alert(err?.response?.data?.message || "Failed to delete job");
+    }
+  };
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -62,13 +90,23 @@ export default function JobCard({
         </p>
       )}
 
-      <div className="mt-5">
+      <div className="mt-5 flex items-center justify-between gap-3">
         <Link
           to={`/jobs/${job._id}`}
           className="text-sm font-medium text-blue-600 hover:underline"
         >
           View Details
         </Link>
+
+        {canDelete && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="text-sm font-medium text-red-600 hover:underline"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
     </div>

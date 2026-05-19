@@ -425,7 +425,9 @@ exports.getMyJobs = async (req, res, next) => {
   try {
     const jobs = await JobPost.find({
       createdBy: req.user._id
-    }).lean();
+    })
+      .populate('createdBy', 'username')
+      .lean();
 
     const jobIds = jobs.map((j) => j._id);
 

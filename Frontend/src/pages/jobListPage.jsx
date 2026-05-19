@@ -137,6 +137,9 @@ export default function JobListPage() {
             <JobCard
               key={job._id}
               job={job}
+              onDelete={(deletedId) =>
+                setJobs((prev) => prev.filter((j) => j._id !== deletedId))
+              }
             />
           ))}
         </div>

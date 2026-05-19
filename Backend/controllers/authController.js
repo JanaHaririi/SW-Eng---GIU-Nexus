@@ -110,9 +110,14 @@ exports.login = async (req, res, next) => {
         // Only recruiter accounts are subject to the admin-approval gate.
         // Admins and job seekers log in regardless of their recruiterStatus.
         if (user.role === 'recruiter' && user.recruiterStatus !== 'approved') {
+            const message =
+                user.recruiterStatus === 'rejected'
+                    ? 'Your account has been suspended.'
+                    : 'Account pending admin approval.';
+
             return res.status(403).json({
                 success: false,
-                message: 'Account pending admin approval.'
+                message
             });
         }
 

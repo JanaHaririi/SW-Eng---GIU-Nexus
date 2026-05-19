@@ -101,7 +101,13 @@ const RecruiterDashboard = () => {
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {jobs.map((job) => (
                             <div key={job._id} className="border rounded-lg p-4 bg-white shadow-sm">
-                                <JobCard job={job} showSaveButton={false} />
+                                <JobCard
+                                    job={job}
+                                    showSaveButton={false}
+                                    onDelete={(deletedId) =>
+                                        setJobs((prev) => prev.filter((j) => j._id !== deletedId))
+                                    }
+                                />
                                 <div className="mt-3 pt-3 border-t flex justify-between items-center">
                   <span className="text-sm text-gray-600">
                     Applicants: <span className="font-semibold">{job.applicantCount || 0}</span>

@@ -85,7 +85,7 @@ const AdminDashboard = () => {
               </p>
 
               <p>
-                Applicants: {job.applicantsCount}
+                Applicants: {job.applicationCount}
               </p>
             </div>
           ))}

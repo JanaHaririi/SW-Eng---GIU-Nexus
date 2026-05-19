@@ -29,3 +29,8 @@ export const getRecommendedJobs = async () => {
   const response = await api.get("/jobs/recommended");
   return response.data;
 };
+
+export const deleteJob = async (id) => {
+  const response = await api.delete(`/jobs/${id}`);
+  return response.data;
+};
