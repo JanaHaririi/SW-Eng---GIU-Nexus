@@ -6,7 +6,7 @@ export default function EditProfilePage() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     bio: '',
     profilePicture: '',
   });
@@ -22,7 +22,7 @@ export default function EditProfilePage() {
         const data = await getProfile();
 
         setFormData({
-          name: data.name || '',
+          username: data.username || '',
           bio: data.bio || '',
           profilePicture: data.profilePicture || '',
         });
@@ -72,13 +72,13 @@ export default function EditProfilePage() {
 
       <form onSubmit={handleSubmit} className="profile-form">
         <div className="filter-group">
-          <label>Name</label>
+          <label>Username</label>
           <input
             type="text"
-            name="name"
-            value={formData.name}
+            name="username"
+            value={formData.username}
             onChange={handleChange}
-            placeholder="Enter your name"
+            placeholder="Enter your username"
           />
         </div>
 

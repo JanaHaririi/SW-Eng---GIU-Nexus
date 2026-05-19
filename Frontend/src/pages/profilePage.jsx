@@ -84,12 +84,12 @@ export default function ProfilePage() {
             />
           ) : (
             <div className="profile-picture-placeholder">
-              {profile.name?.charAt(0) || profile.email?.charAt(0) || 'U'}
+              {profile.username?.charAt(0) || profile.email?.charAt(0) || 'U'}
             </div>
           )}
 
           <div>
-            <h2>{profile.name || 'Unnamed User'}</h2>
+            <h2>{profile.username || 'Unnamed User'}</h2>
             <p>{profile.email}</p>
             <span className="status-badge status-approved">
               {profile.role}
