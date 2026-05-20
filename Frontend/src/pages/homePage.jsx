@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import JobCard from '../components/JobCard';
-import Skeleton from '../components/Skeleton';
+import JobCard from '../components/jobCard';
+import Skeleton from '../components/skeleton';
 
 import { getJobs, getRecommendedJobs } from '../services/jobService';
 import { useAuth } from '../context/authContext';
