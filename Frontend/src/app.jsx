@@ -20,6 +20,7 @@ import EditJobPage from './pages/recruiter/editJobPage.jsx';
 import ApplicantsPage from './pages/recruiter/applicantsPage.jsx';
 
 import MyApplicationsPage from './pages/myApplicationsPage.jsx';
+import SettingsPage from './pages/settingsPage.jsx';
 
 import JobListPage from './pages/jobListPage.jsx';
 import JobDetailPage from './pages/jobDetailPage.jsx';
@@ -83,6 +84,8 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
 
             <Route path="/profile/edit" element={<EditProfilePage />} />
+
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
 
           {/* =========================

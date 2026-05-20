@@ -210,7 +210,12 @@ exports.applyToJob = async (req, res, next) => {
 // 6. GET recommended jobs
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function hfInfer(modelId, body, label, { retries = 3, delayMs = 4000 } = {}) {
+async function hfInfer(
+  modelId,
+  body,
+  label,
+  { retries = 1, delayMs = 2000, timeoutMs = 8000 } = {}
+) {
   if (!process.env.HF_TOKEN) throw new Error('HF_TOKEN env var is missing');
 
   const url = `https://router.huggingface.co/hf-inference/models/${modelId}`;
@@ -222,6 +227,8 @@ async function hfInfer(modelId, body, label, { retries = 3, delayMs = 4000 } = {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     const t0 = Date.now();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -231,6 +238,7 @@ async function hfInfer(modelId, body, label, { retries = 3, delayMs = 4000 } = {
           'x-wait-for-model': 'true',
         },
         body: payload,
+        signal: controller.signal,
       });
 
       const ms = Date.now() - t0;
@@ -251,42 +259,18 @@ async function hfInfer(modelId, body, label, { retries = 3, delayMs = 4000 } = {
       throw new Error(`HF ${response.status}: ${errText}`);
     } catch (netErr) {
       lastErr = netErr;
-      console.warn(`[HF:${label}] attempt ${attempt + 1} threw: ${netErr.message}`);
+      const reason = netErr.name === 'AbortError' ? `timeout after ${timeoutMs}ms` : netErr.message;
+      console.warn(`[HF:${label}] attempt ${attempt + 1} threw: ${reason}`);
       if (attempt < retries) {
         await sleep(delayMs * (attempt + 1));
         continue;
       }
       break;
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw lastErr;
-}
-
-function cosineSimilarity(a, b) {
-  let dot = 0, magA = 0, magB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  const denom = Math.sqrt(magA) * Math.sqrt(magB);
-  return denom === 0 ? 0 : dot / denom;
-}
-
-function flattenEmbedding(emb) {
-  // featureExtraction can return number[] or number[][] depending on the model.
-  // sentence-transformers usually returns number[] per input. If we get a 2D
-  // matrix per input (token-level), mean-pool it.
-  if (!Array.isArray(emb)) return [];
-  if (typeof emb[0] === 'number') return emb;
-  if (Array.isArray(emb[0]) && typeof emb[0][0] === 'number') {
-    const dim = emb[0].length;
-    const out = new Array(dim).fill(0);
-    for (const tok of emb) for (let i = 0; i < dim; i++) out[i] += tok[i];
-    for (let i = 0; i < dim; i++) out[i] /= emb.length;
-    return out;
-  }
-  return [];
 }
 
 exports.getRecommendedJobs = async (req, res, next) => {
@@ -314,23 +298,29 @@ exports.getRecommendedJobs = async (req, res, next) => {
     );
 
     try {
-      const raw = await hfInfer(
+      const scores = await hfInfer(
         'sentence-transformers/all-MiniLM-L6-v2',
-        { inputs: [studentText, ...jobTexts] },
-        'featureExtraction'
+        {
+          inputs: {
+            source_sentence: studentText,
+            sentences: jobTexts,
+          },
+        },
+        'sentenceSimilarity'
       );
 
-      const vectors = Array.isArray(raw) ? raw.map(flattenEmbedding) : [];
-      if (vectors.length !== jobTexts.length + 1 || vectors[0].length === 0) {
-        throw new Error(`Unexpected embedding shape from HF (got ${vectors.length}, expected ${jobTexts.length + 1})`);
+      if (!Array.isArray(scores) || scores.length !== jobTexts.length) {
+        throw new Error(`Unexpected score shape from HF (got ${scores?.length ?? 0}, expected ${jobTexts.length})`);
       }
 
-      const studentVec = vectors[0];
-      const scored = jobs.map((job, i) => ({
-        ...job.toObject(),
-        score: Number(cosineSimilarity(studentVec, vectors[i + 1]).toFixed(4)),
-      }));
-      scored.sort((a, b) => b.score - a.score);
+      const MIN_SCORE = 0.35;
+      const scored = jobs
+        .map((job, i) => ({
+          ...job.toObject(),
+          score: Number(scores[i].toFixed(4)),
+        }))
+        .filter((j) => j.score >= MIN_SCORE)
+        .sort((a, b) => b.score - a.score);
 
       return res.status(200).json({
         success: true,
@@ -351,6 +341,87 @@ exports.getRecommendedJobs = async (req, res, next) => {
     next(err);
   }
 };
+
+// BONUS: AI cover letter suggestion
+// POST /api/v1/jobs/:id/cover-letter — job seeker only
+exports.generateCoverLetter = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('username bio');
+    const job = await JobPost.findById(req.params.id).select('title company description requirements');
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+
+    if (!user?.bio || user.bio.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Your bio is empty. Update your profile first so the AI has context to work with.',
+      });
+    }
+
+    const companyName = job.company || 'the company';
+
+    const prompt = `The following is a professional cover letter.
+
+From: ${user.username}
+For: ${job.title} at ${companyName}
+Job description: ${job.description}
+Job requirements: ${(job.requirements || []).join(', ')}
+Candidate background: ${user.bio}
+
+Cover Letter:
+`;
+
+    try {
+      const raw = await hfInfer(
+        'gpt2',
+        {
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 260,
+            temperature: 0.8,
+            top_p: 0.9,
+            repetition_penalty: 1.2,
+            do_sample: true,
+            return_full_text: false,
+          },
+        },
+        'textGeneration',
+        { timeoutMs: 25000 }
+      );
+
+      let text = '';
+      if (Array.isArray(raw) && raw[0]?.generated_text) {
+        text = raw[0].generated_text;
+      } else if (typeof raw === 'string') {
+        text = raw;
+      } else if (raw?.generated_text) {
+        text = raw.generated_text;
+      }
+
+      text = text.trim();
+
+      if (!text) {
+        throw new Error('Empty response from text-generation model');
+      }
+
+      return res.status(200).json({ success: true, coverLetter: text });
+    } catch (hfErr) {
+      console.error('[HF:textGeneration] giving up:', hfErr?.message || hfErr);
+      return res.status(503).json({
+        success: false,
+        message: 'AI cover letter generation is unavailable right now. Please try again in a moment.',
+      });
+    }
+  } catch (err) {
+    if (err.name === 'CastError') {
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    }
+    next(err);
+  }
+};
+
 // 5. CREATE job
 exports.createJob = async (req, res, next) => {
   try {

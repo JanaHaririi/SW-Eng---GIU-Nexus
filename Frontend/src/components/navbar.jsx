@@ -1,10 +1,15 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
+import { useTheme } from '../context/themeContext';
+import logoLight from '../assets/logo.svg';
+import logoDark from '../assets/logo-dark.svg';
 
 const linkBase =
-  'px-3 py-2 rounded-md text-sm font-medium transition-colors';
-const linkIdle = 'text-slate-700 hover:bg-slate-100';
-const linkActive = 'bg-brand-50 text-brand-700';
+  'inline-flex shrink-0 items-center whitespace-nowrap px-2.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150';
+const linkIdle =
+  'text-ink-muted hover:text-ink hover:bg-surface-muted';
+const linkActive =
+  'bg-primary text-primary-fg font-semibold shadow-sm';
 
 function navLinkClass({ isActive }) {
   return `${linkBase} ${isActive ? linkActive : linkIdle}`;
@@ -12,8 +17,10 @@ function navLinkClass({ isActive }) {
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const role = user?.role;
+  const logoUrl = theme === 'dark' ? logoDark : logoLight;
 
   const handleLogout = async () => {
     await logout();
@@ -21,13 +28,17 @@ export default function Navbar() {
   };
 
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        <Link to="/" className="text-lg font-semibold text-brand-700">
-          GIU Nexus
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur supports-[backdrop-filter]:bg-surface/75">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <Link
+          to="/"
+          aria-label="GIU Nexus — Home"
+          className="flex shrink-0 items-center text-primary transition-opacity hover:opacity-80"
+        >
+          <img src={logoUrl} alt="GIU Nexus" className="h-7 w-auto" />
         </Link>
 
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
           <NavLink to="/" end className={navLinkClass}>
             Home
           </NavLink>
@@ -84,16 +95,16 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3">
           {isAuthenticated ? (
             <>
-              <span className="hidden text-sm text-slate-600 sm:inline">
+              <span className="hidden text-sm font-medium text-ink-muted lg:inline">
                 {user?.name}
               </span>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-fg shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--color-focus-ring)]"
               >
                 Log out
               </button>
@@ -102,13 +113,13 @@ export default function Navbar() {
             <>
               <Link
                 to="/login"
-                className="rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                className="rounded-md px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
               >
                 Log in
               </Link>
               <Link
                 to="/register"
-                className="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-fg shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--color-focus-ring)]"
               >
                 Sign up
               </Link>

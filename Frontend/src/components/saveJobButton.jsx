@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { toggleSaveJob } from "../services/jobService";
+import { useState } from 'react';
+import { toggleSaveJob } from '../services/jobService';
 
 export default function SaveJobButton({ job, onToggle }) {
   const [loading, setLoading] = useState(false);
@@ -8,14 +8,9 @@ export default function SaveJobButton({ job, onToggle }) {
   const handleClick = async () => {
     try {
       setLoading(true);
-
       const data = await toggleSaveJob(job._id);
-
       setSaved(data.saved);
-
-      if (onToggle) {
-        onToggle(data.saved);
-      }
+      onToggle?.(data.saved);
     } catch (error) {
       console.error(error);
     } finally {
@@ -23,17 +18,21 @@ export default function SaveJobButton({ job, onToggle }) {
     }
   };
 
+  const disabled = loading || job?.status !== 'open';
+
   return (
     <button
+      type="button"
       onClick={handleClick}
-      disabled={loading || job?.status !== "open"}
-      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+      disabled={disabled}
+      aria-pressed={saved}
+      className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         saved
-          ? "bg-blue-600 text-white"
-          : "bg-slate-200 text-slate-700"
+          ? 'bg-primary text-primary-fg shadow-sm hover:bg-primary-hover'
+          : 'border border-line-strong bg-surface text-ink hover:bg-surface-muted'
       }`}
     >
-      {loading ? "..." : saved ? "Saved" : "Save"}
+      {loading ? '…' : saved ? 'Saved' : 'Save'}
     </button>
   );
 }

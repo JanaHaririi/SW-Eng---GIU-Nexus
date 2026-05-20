@@ -115,8 +115,17 @@ const AdminUsersPage = () => {
 
   return (
     <div className="page-container">
-      <h1>Admin Users</h1>
-      <p>View, filter, update, and delete platform users.</p>
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          Admin
+        </p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">
+          All users
+        </h1>
+        <p className="mt-1 text-sm text-ink-muted">
+          View, filter, update, and delete platform users.
+        </p>
+      </div>
 
       {error && <div className="alert alert-error">{error}</div>}
       {successMessage && (

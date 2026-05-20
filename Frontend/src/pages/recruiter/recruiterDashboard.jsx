@@ -1,148 +1,186 @@
-// Frontend/src/pages/recruiter/recruiterDashboard.jsx
-import React, { useState, useEffect, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import { AuthContext } from '../../context/authContext';
+import { useAuth } from '../../context/authContext';
 import Spinner from '../../components/spinner';
 import JobCard from '../../components/jobCard';
 
 const RecruiterDashboard = () => {
-    const { user } = useContext(AuthContext);
-    const [jobs, setJobs] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const { user } = useAuth();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        fetchMyJobs();
-    }, []);
+  useEffect(() => {
+    fetchMyJobs();
+  }, []);
 
-    const fetchMyJobs = async () => {
-        setLoading(true);
-        try {
-            // Fixed: removed duplicate /api/v1 prefix
-            const response = await api.get('/jobs/my-jobs');
-            setJobs(response.data.jobs || []);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching jobs:', err);
-            setError('Failed to load your job posts. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Show pending approval banner
-    if (user?.status === 'pending') {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded">
-                    <p className="font-bold">Pending Admin Approval</p>
-                    <p>
-                        Your account is awaiting approval from an administrator.
-                        You cannot create or manage job posts until your account is approved.
-                    </p>
-                    <p className="text-sm mt-2">
-                        Please check back later or contact support if you have questions.
-                    </p>
-                </div>
-            </div>
-        );
+  const fetchMyJobs = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/jobs/my-jobs');
+      setJobs(response.data.jobs || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching jobs:', err);
+      setError('Failed to load your job posts. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center min-h-[400px]">
-                <Spinner />
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    {error}
-                    <button
-                        onClick={fetchMyJobs}
-                        className="ml-4 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                    >
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
+  if (user?.status === 'pending') {
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Recruiter Dashboard</h1>
-                <Link
-                    to="/recruiter/jobs/new"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                >
-                    + Post New Job
-                </Link>
-            </div>
-
-            <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4">Your Job Posts</h2>
-                {jobs.length === 0 ? (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                        <p className="text-gray-600 mb-4">You haven't posted any jobs yet.</p>
-                        <Link
-                            to="/recruiter/jobs/new"
-                            className="text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                            Create your first job posting →
-                        </Link>
-                    </div>
-                ) : (
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {jobs.map((job) => (
-                            <div key={job._id} className="border rounded-lg p-4 bg-white shadow-sm">
-                                <JobCard
-                                    job={job}
-                                    showSaveButton={false}
-                                    onDelete={(deletedId) =>
-                                        setJobs((prev) => prev.filter((j) => j._id !== deletedId))
-                                    }
-                                />
-                                <div className="mt-3 pt-3 border-t flex justify-between items-center">
-                  <span className="text-sm text-gray-600">
-                    Applicants: <span className="font-semibold">{job.applicantCount || 0}</span>
-                  </span>
-                                    <Link
-                                        to={`/recruiter/jobs/${job._id}/applicants`}
-                                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                                    >
-                                        View Applicants →
-                                    </Link>
-                                </div>
-                                <div className="mt-2 flex gap-2">
-                                    <Link
-                                        to={`/recruiter/jobs/${job._id}/edit`}
-                                        className="text-gray-600 hover:text-gray-700 text-sm"
-                                    >
-                                        Edit
-                                    </Link>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-                <p className="font-medium mb-2">📊 Quick Stats</p>
-                <p>Total job posts: {jobs.length}</p>
-                <p>
-                    Total applicants:{' '}
-                    {jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0)}
-                </p>
-            </div>
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+          <p className="text-base font-semibold">Pending admin approval</p>
+          <p className="mt-2 text-sm">
+            Your account is awaiting approval from an administrator. You can't
+            create or manage job posts until your account is approved.
+          </p>
+          <p className="mt-2 text-xs text-amber-700">
+            Please check back later or contact support if you have questions.
+          </p>
         </div>
+      </div>
     );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+          <button
+            onClick={fetchMyJobs}
+            className="ml-3 font-semibold underline underline-offset-2"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalApplicants = jobs.reduce(
+    (sum, job) => sum + (job.applicantCount || 0),
+    0
+  );
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Recruiter
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">
+            Your dashboard
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            Manage your job posts and applicants.
+          </p>
+        </div>
+
+        <Link
+          to="/recruiter/jobs/new"
+          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg shadow-sm transition-colors hover:bg-primary-hover"
+        >
+          + Post new job
+        </Link>
+      </div>
+
+      {/* Stat strip */}
+      <section className="mb-8 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-subtle">
+            Total job posts
+          </p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-ink">
+            {jobs.length}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-subtle">
+            Total applicants
+          </p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-ink">
+            {totalApplicants}
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-5 text-lg font-bold tracking-tight text-ink">
+          Your job posts
+        </h2>
+
+        {jobs.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center">
+            <p className="text-base font-semibold text-ink">
+              You haven't posted any jobs yet
+            </p>
+            <p className="mt-1 text-sm text-ink-muted">
+              Get your first opening in front of GIU students.
+            </p>
+            <Link
+              to="/recruiter/jobs/new"
+              className="mt-4 inline-block text-sm font-semibold text-primary transition-colors hover:text-primary-hover"
+            >
+              Create your first job posting →
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {jobs.map((job) => (
+              <div
+                key={job._id}
+                className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <JobCard
+                  job={job}
+                  showSaveButton={false}
+                  onDelete={(deletedId) =>
+                    setJobs((prev) => prev.filter((j) => j._id !== deletedId))
+                  }
+                />
+
+                <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                  <span className="text-ink-muted">
+                    Applicants:{' '}
+                    <span className="font-semibold text-ink">
+                      {job.applicantCount || 0}
+                    </span>
+                  </span>
+                  <Link
+                    to={`/recruiter/jobs/${job._id}/applicants`}
+                    className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover"
+                  >
+                    View applicants →
+                  </Link>
+                </div>
+
+                <Link
+                  to={`/recruiter/jobs/${job._id}/edit`}
+                  className="text-sm font-semibold text-ink-muted transition-colors hover:text-ink"
+                >
+                  Edit job
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
 };
 
 export default RecruiterDashboard;

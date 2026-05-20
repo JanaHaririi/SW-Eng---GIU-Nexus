@@ -44,6 +44,14 @@ export function AuthProvider({ children }) {
     setUserState(nextUser);
   }, []);
 
+  const updateUser = useCallback((partialUser) => {
+    setUserState((prev) => {
+      const merged = { ...(prev || {}), ...partialUser };
+      setStoredUser(merged);
+      return merged;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -51,8 +59,9 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(token),
       login,
       logout,
+      updateUser,
     }),
-    [user, token, login, logout]
+    [user, token, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

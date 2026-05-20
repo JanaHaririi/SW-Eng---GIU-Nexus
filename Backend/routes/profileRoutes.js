@@ -5,6 +5,8 @@ const {
   updateProfile,
   changePassword,
   extractSkills,
+  updateEmail,
+  deleteAccount,
 } = require('../controllers/profileController');
 
 const { protect, authorize } = require('../middlewares/auth');
@@ -130,5 +132,53 @@ router.patch('/change-password', protect, changePassword);
  *       403: { description: Only jobSeekers may extract skills }
  */
 router.post('/extract-skills', protect, authorize('jobSeeker'), extractSkills);
+
+/**
+ * @swagger
+ * /profile/email:
+ *   patch:
+ *     tags: [Profile]
+ *     summary: Change the authenticated user's email — requires current password
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:    { type: string, format: email, example: "new@student.giu-uni.de" }
+ *               password: { type: string, format: password, example: "CurrentPass!1" }
+ *     responses:
+ *       200: { description: Email updated }
+ *       400: { description: Missing fields, bad email, or email already taken }
+ *       401: { description: Incorrect password }
+ */
+router.patch('/email', protect, updateEmail);
+
+/**
+ * @swagger
+ * /profile:
+ *   delete:
+ *     tags: [Profile]
+ *     summary: Delete the authenticated user's own account — requires current password
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password: { type: string, format: password }
+ *     responses:
+ *       200: { description: Account deleted }
+ *       401: { description: Incorrect password }
+ */
+router.delete('/', protect, deleteAccount);
 
 module.exports = router;

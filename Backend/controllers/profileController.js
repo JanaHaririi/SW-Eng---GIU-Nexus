@@ -78,7 +78,13 @@ function cleanExtractedSkills(nerResult) {
     if (!allowedGroups.includes(group)) continue;
 
     const word = (item.word || '').replace(/\s+/g, ' ').trim();
-    if (word.length < 2) continue;
+
+    // Drop BERT WordPiece sub-token fragments ("##it", "Power##l"),
+    // pure numbers ("10"), and anything shorter than 3 chars — they
+    // pollute the embedding query without adding signal.
+    if (word.length < 3) continue;
+    if (word.includes('##')) continue;
+    if (!/[a-zA-Z]/.test(word)) continue;
 
     const key = word.toLowerCase();
     if (seen.has(key)) continue;
@@ -147,6 +153,21 @@ const updateProfile = async (req, res, next) => {
 
       updates.profilePicture = uploadResult.secure_url;
       updates.profilePicturePublicId = uploadResult.public_id;
+    } else if (updates.profilePicture === '' || updates.profilePicture === null) {
+      // Explicit removal: client sent profilePicture as empty/null with no
+      // file. Drop the Cloudinary asset (if any) and clear both fields.
+      const existing = await User.findById(req.user._id).select('profilePicturePublicId');
+
+      if (existing?.profilePicturePublicId) {
+        try {
+          await cloudinary.uploader.destroy(existing.profilePicturePublicId);
+        } catch (destroyErr) {
+          console.warn('[cloudinary] failed to delete image on removal:', destroyErr.message);
+        }
+      }
+
+      updates.profilePicture = '';
+      updates.profilePicturePublicId = '';
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, {
@@ -273,9 +294,116 @@ const extractSkills = async (req, res, next) => {
   }
 };
 
+// PATCH /api/v1/profile/email
+const updateEmail = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email and current password are both required.',
+      });
+    }
+
+    const normalised = String(email).trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalised)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid email address.',
+      });
+    }
+
+    const taken = await User.findOne({
+      email: normalised,
+      _id: { $ne: req.user._id },
+    }).select('_id');
+    if (taken) {
+      return res.status(400).json({
+        success: false,
+        message: 'That email is already in use.',
+      });
+    }
+
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect password.',
+      });
+    }
+
+    user.email = normalised;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /api/v1/profile
+const deleteAccount = async (req, res, next) => {
+  try {
+    const { password } = req.body || {};
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required to delete your account.',
+      });
+    }
+
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect password.',
+      });
+    }
+
+    if (user.profilePicturePublicId) {
+      try {
+        await cloudinary.uploader.destroy(user.profilePicturePublicId);
+      } catch (destroyErr) {
+        console.warn('[cloudinary] failed to delete on account deletion:', destroyErr.message);
+      }
+    }
+
+    await user.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   changePassword,
   extractSkills,
+  updateEmail,
+  deleteAccount,
 };

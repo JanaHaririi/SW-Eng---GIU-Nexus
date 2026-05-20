@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-import JobCard from "../components/JobCard";
-import Skeleton from "../components/Skeleton";
+import JobCard from '../components/jobCard';
+import Skeleton from '../components/skeleton';
 
-import { getRecommendedJobs } from "../services/jobService";
+import { getRecommendedJobs } from '../services/jobService';
 
 const RecommendedJobsPage = () => {
   const [jobs, setJobs] = useState([]);
@@ -16,7 +17,6 @@ const RecommendedJobsPage = () => {
   const fetchRecommendedJobs = async () => {
     try {
       const data = await getRecommendedJobs();
-
       setJobs(data.jobs || data);
     } catch (error) {
       console.error(error);
@@ -25,52 +25,49 @@ const RecommendedJobsPage = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <h1 className="mb-6 text-3xl font-bold">
-          Recommended Jobs
-        </h1>
-
-        <Skeleton
-          rows={5}
-          className="h-40 w-full"
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-6">
-
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Recommended Jobs
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          Personalized
+        </p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">
+          Recommended jobs
         </h1>
-
-        <p className="mt-2 text-slate-600">
-          Jobs matched to your skills and profile
+        <p className="mt-1 text-sm text-ink-muted">
+          Ranked by AI similarity between your skills and each job's requirements.
         </p>
       </div>
 
-      {jobs.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-center">
-          <p className="text-slate-600">
-            No recommended jobs found.
+      {loading ? (
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 w-full" />
+          ))}
+        </div>
+      ) : jobs.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center">
+          <p className="text-base font-semibold text-ink">
+            No recommendations yet
           </p>
+          <p className="mt-1 text-sm text-ink-muted">
+            Update your bio with the skills you have, then click{' '}
+            <strong>Extract Skills</strong> on your profile.
+          </p>
+          <Link
+            to="/profile"
+            className="mt-4 inline-block text-sm font-semibold text-primary transition-colors hover:text-primary-hover"
+          >
+            Go to profile →
+          </Link>
         </div>
       ) : (
-        <div className="grid gap-5">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {jobs.map((job) => (
-            <JobCard
-              key={job._id}
-              job={job}
-              showScore={true}
-            />
+            <JobCard key={job._id} job={job} showScore={true} />
           ))}
         </div>
       )}
-
     </div>
   );
 };

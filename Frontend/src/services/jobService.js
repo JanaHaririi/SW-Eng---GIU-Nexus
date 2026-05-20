@@ -34,3 +34,8 @@ export const deleteJob = async (id) => {
   const response = await api.delete(`/jobs/${id}`);
   return response.data;
 };
+
+export const generateCoverLetter = async (id) => {
+  const response = await api.post(`/jobs/${id}/cover-letter`);
+  return response.data;
+};

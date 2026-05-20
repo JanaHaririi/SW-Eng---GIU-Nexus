@@ -63,16 +63,34 @@ const PendingRecruitersPage = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <h1>Pending Recruiters</h1>
-        <p>Loading pending recruiters...</p>
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Admin
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">
+            Pending recruiters
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            Loading pending recruiters…
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <h1>Pending Recruiters</h1>
-      <p>Review recruiter accounts waiting for admin approval.</p>
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          Admin
+        </p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">
+          Pending recruiters
+        </h1>
+        <p className="mt-1 text-sm text-ink-muted">
+          Review recruiter accounts waiting for admin approval.
+        </p>
+      </div>
 
       {error && <div className="alert alert-error">{error}</div>}
       {successMessage && (

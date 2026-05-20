@@ -1,8 +1,8 @@
-import { Link } from "react-router-dom";
-import CategoryBadge from "./categoryBadge";
-import SaveJobButton from "./saveJobButton";
-import { useAuth } from "../context/authContext";
-import { deleteJob } from "../services/jobService";
+import { Link } from 'react-router-dom';
+import CategoryBadge from './categoryBadge';
+import SaveJobButton from './saveJobButton';
+import { useAuth } from '../context/authContext';
+import { deleteJob } from '../services/jobService';
 
 export default function JobCard({
   job,
@@ -11,17 +11,17 @@ export default function JobCard({
   showScore = false,
 }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === 'admin';
 
   if (!job) return null;
 
   const ownerId =
-    job.createdBy && typeof job.createdBy === "object"
+    job.createdBy && typeof job.createdBy === 'object'
       ? job.createdBy._id
       : job.createdBy;
   const isOwner =
     user?._id && ownerId && String(ownerId) === String(user._id);
-  const canDelete = isAdmin || (user?.role === "recruiter" && isOwner);
+  const canDelete = isAdmin || (user?.role === 'recruiter' && isOwner);
 
   const handleDelete = async () => {
     if (!window.confirm(`Delete "${job.title}"? This cannot be undone.`)) {
@@ -33,82 +33,74 @@ export default function JobCard({
       onDelete?.(job._id);
     } catch (err) {
       console.error(err);
-      alert(err?.response?.data?.message || "Failed to delete job");
+      alert(err?.response?.data?.message || 'Failed to delete job');
     }
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-
+    <div className="flex h-full flex-col rounded-xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
-
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold tracking-tight text-ink">
             {job.title}
           </h2>
-
-          <p className="mt-1 text-sm text-slate-600">
-            by {job.createdBy?.username || "Unknown recruiter"}
+          <p className="mt-1 text-sm text-ink-muted">
+            by{' '}
+            <span className="font-medium text-ink">
+              {job.createdBy?.username || 'Unknown recruiter'}
+            </span>
           </p>
         </div>
 
-        <SaveJobButton
-          job={job}
-          onToggle={onSaveToggle}
-        />
+        <SaveJobButton job={job} onToggle={onSaveToggle} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-
         {job.type && (
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
+          <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-ink-muted">
             {job.type}
           </span>
         )}
 
         {job.location && (
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
+          <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-ink-muted">
             {job.location}
           </span>
         )}
 
-        {job.category && (
-          <CategoryBadge category={job.category} />
-        )}
+        {job.category && <CategoryBadge category={job.category} />}
 
         {showScore && job.score && (
-          <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-            {job.score}% Match
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">
+            {Math.round(job.score * 100)}% match
           </span>
         )}
-
       </div>
 
       {job.description && (
-        <p className="mt-4 text-sm text-slate-600 line-clamp-3">
+        <p className="mt-4 line-clamp-3 text-sm leading-6 text-ink-muted">
           {job.description}
         </p>
       )}
 
-      <div className="mt-5 flex items-center justify-between gap-3">
+      <div className="mt-auto flex items-center justify-between gap-3 pt-5">
         <Link
           to={`/jobs/${job._id}`}
-          className="text-sm font-medium text-blue-600 hover:underline"
+          className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover"
         >
-          View Details
+          View details →
         </Link>
 
         {canDelete && (
           <button
             type="button"
             onClick={handleDelete}
-            className="text-sm font-medium text-red-600 hover:underline"
+            className="text-sm font-semibold text-red-600 transition-colors hover:text-red-700"
           >
             Delete
           </button>
         )}
       </div>
-
     </div>
   );
 }

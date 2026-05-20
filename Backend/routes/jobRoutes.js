@@ -12,7 +12,8 @@ const {
   createJob,
   getMyJobs,
   updateJob,
-  deleteJob
+  deleteJob,
+  generateCoverLetter
 } = require('../controllers/jobController');
 const { getJobApplicants } = require('../controllers/applicationController');
 
@@ -371,6 +372,38 @@ router.post(
   protect,
   authorize('jobSeeker'),
   applyToJob
+);
+
+/**
+ * @swagger
+ * /jobs/{id}/cover-letter:
+ *   post:
+ *     tags: [Jobs]
+ *     summary: Generate an AI cover-letter draft for this job (jobSeeker only) — bonus feature
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Cover letter draft returned
+ *         content:
+ *           application/json:
+ *             example: { success: true, coverLetter: "Dear Hiring Manager, ..." }
+ *       400: { description: User has no bio yet }
+ *       401: { description: Not authorized }
+ *       403: { description: Only jobSeekers can generate cover letters }
+ *       404: { description: Job not found }
+ *       503: { description: HF text-generation model unavailable }
+ */
+router.post(
+  '/:id/cover-letter',
+  protect,
+  authorize('jobSeeker'),
+  generateCoverLetter
 );
 
 module.exports = router;
