@@ -3,6 +3,7 @@ import {
   getPendingRecruiters,
   updateUserStatus,
 } from "../../services/userService";
+import Spinner from "../../components/spinner";
 
 const PendingRecruitersPage = () => {
   const [recruiters, setRecruiters] = useState([]);
@@ -70,10 +71,8 @@ const PendingRecruitersPage = () => {
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">
             Pending recruiters
           </h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            Loading pending recruiters…
-          </p>
         </div>
+        <Spinner label="Loading pending recruiters" />
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, updateProfile } from '../services/profileService';
 import { useAuth } from '../context/authContext';
+import Spinner from '../components/spinner';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -133,8 +134,8 @@ export default function EditProfilePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-10 text-ink-muted">
-        Loading profile…
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <Spinner label="Loading profile" />
       </div>
     );
   }

@@ -5,6 +5,7 @@ import {
   deleteUser,
 } from "../../services/userService";
 import Modal from "../../components/modal";
+import Spinner from "../../components/spinner";
 
 const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -165,7 +166,7 @@ const AdminUsersPage = () => {
       </div>
 
       {loading ? (
-        <p>Loading users...</p>
+        <Spinner label="Loading users" />
       ) : users.length === 0 ? (
         <div className="empty-state">
           <p>No users found for the selected filters.</p>

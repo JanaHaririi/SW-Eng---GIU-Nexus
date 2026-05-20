@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { toggleSaveJob } from '../services/jobService';
+import { useAuth } from '../context/authContext';
 
 export default function SaveJobButton({ job, onToggle }) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(job?.saved || false);
+
+  if (user?.role !== 'jobSeeker') return null;
 
   const handleClick = async () => {
     try {

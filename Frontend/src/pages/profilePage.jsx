@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getProfile, extractSkills } from '../services/profileService';
 import SkillChip from '../components/skillChip';
+import Spinner from '../components/spinner';
 
 const ROLE_LABELS = {
   jobSeeker: 'Job Seeker',
@@ -64,8 +65,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-10 text-ink-muted">
-        Loading profile…
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        <Spinner label="Loading profile" />
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getAdminStats } from '../../services/adminService';
+import Spinner from '../../components/spinner';
 
 /* -------------------- color palettes -------------------- */
 
@@ -210,8 +211,8 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-10 text-ink-muted sm:px-6">
-        Loading dashboard…
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+        <Spinner label="Loading dashboard" />
       </div>
     );
   }

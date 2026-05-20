@@ -28,7 +28,7 @@ export async function resetPassword(token, password) {
   return data;
 }
 export async function changePassword(currentPassword, newPassword) {
-  const { data } = await api.patch('/auth/change-password', {
+  const { data } = await api.patch('/profile/change-password', {
     currentPassword,
     newPassword,
   });
