@@ -4,7 +4,7 @@ import {
   updateUserStatus,
   deleteUser,
 } from "../../services/userService";
-import Modal from "../../components/Modal";
+import Modal from "../../components/modal";
 
 const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
