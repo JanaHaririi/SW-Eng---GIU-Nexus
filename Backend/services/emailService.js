@@ -6,8 +6,11 @@ const sendEmail = async (options) => {
 
     try {
 
+        const port = parseInt(process.env.EMAIL_PORT, 10) || 587;
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: process.env.EMAIL_HOST,
+            port,
+            secure: port === 465,
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
@@ -28,9 +31,14 @@ const sendEmail = async (options) => {
 
     } catch (error) {
 
-        console.error('Email sending failed:', error);
+        console.error(
+            'Email sending failed:',
+            error.code || '',
+            error.responseCode || '',
+            error.message
+        );
 
-        throw new Error('Email could not be sent');
+        throw new Error(`Email could not be sent: ${error.code || error.message}`);
 
     }
 
