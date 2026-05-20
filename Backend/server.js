@@ -1,3 +1,8 @@
+// Render's free tier has no IPv6 outbound. Gmail's smtp.gmail.com resolves
+// to an IPv6 address by default, which causes ENETUNREACH on password-reset
+// email sends. Forcing IPv4-first DNS resolution avoids that.
+require('dns').setDefaultResultOrder('ipv4first');
+
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');

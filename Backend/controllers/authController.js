@@ -87,8 +87,8 @@ exports.login = async (req, res, next) => {
             });
         }
 
-        // Check for user
-        const user = await User.findOne({ email });
+        // Emails are stored lowercased by the schema, so normalize the lookup.
+        const user = await User.findOne({ email: email.toLowerCase() });
 
         if (!user) {
             return res.status(401).json({
@@ -163,7 +163,9 @@ exports.forgotPassword = async (req, res, next) => {
 
     try {
 
-        const user = await User.findOne({ email: req.body.email });
+        const user = await User.findOne({
+            email: (req.body.email || '').toLowerCase()
+        });
 
         // Only do the work if the user exists, but always respond with the
         // same generic message so the endpoint can't be used to enumerate
