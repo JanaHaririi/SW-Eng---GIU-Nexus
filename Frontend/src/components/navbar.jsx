@@ -38,7 +38,7 @@ export default function Navbar() {
           <img src={logoUrl} alt="GIU Nexus" className="h-7 w-auto" />
         </Link>
 
-        <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto">
           <NavLink to="/" end className={navLinkClass}>
             Home
           </NavLink>
