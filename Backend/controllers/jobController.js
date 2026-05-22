@@ -362,53 +362,39 @@ exports.generateCoverLetter = async (req, res, next) => {
 
     const companyName = job.company || 'the company';
 
-    const prompt = `The following is a professional cover letter.
-
-From: ${user.username}
-For: ${job.title} at ${companyName}
-Job description: ${job.description}
-Job requirements: ${(job.requirements || []).join(', ')}
-Candidate background: ${user.bio}
-
-Cover Letter:
-`;
-
     try {
-      const raw = await hfInfer(
-        'gpt2',
-        {
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 260,
-            temperature: 0.8,
-            top_p: 0.9,
-            repetition_penalty: 1.2,
-            do_sample: true,
-            return_full_text: false,
+      const t0 = Date.now();
+      const completion = await hf.chatCompletion({
+        model: 'mistralai/Mistral-7B-Instruct-v0.3',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a professional career advisor. Write concise, sincere cover letters of 180-250 words. Warm but professional tone. Start directly with "Dear Hiring Manager,". No placeholders like [Your Name] or [Company]. No markdown. No preamble.',
           },
-        },
-        'textGeneration',
-        { timeoutMs: 25000 }
-      );
+          {
+            role: 'user',
+            content:
+              `Write a cover letter for ${user.username} applying to "${job.title}" at ${companyName}.\n\n` +
+              `Job description: ${job.description}\n` +
+              `Job requirements: ${(job.requirements || []).join(', ')}\n\n` +
+              `Candidate background: ${user.bio}`,
+          },
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      });
 
-      let text = '';
-      if (Array.isArray(raw) && raw[0]?.generated_text) {
-        text = raw[0].generated_text;
-      } else if (typeof raw === 'string') {
-        text = raw;
-      } else if (raw?.generated_text) {
-        text = raw.generated_text;
-      }
-
-      text = text.trim();
+      const text = completion?.choices?.[0]?.message?.content?.trim();
+      console.log(`[HF:chatCompletion] ${Date.now() - t0}ms, ${text?.length || 0} chars`);
 
       if (!text) {
-        throw new Error('Empty response from text-generation model');
+        throw new Error('Empty response from chat-completion model');
       }
 
       return res.status(200).json({ success: true, coverLetter: text });
     } catch (hfErr) {
-      console.error('[HF:textGeneration] giving up:', hfErr?.message || hfErr);
+      console.error('[HF:chatCompletion] giving up:', hfErr?.message || hfErr);
       return res.status(503).json({
         success: false,
         message: 'AI cover letter generation is unavailable right now. Please try again in a moment.',
