@@ -195,18 +195,38 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const fetchStats = async ({ silent = false } = {}) => {
+    try {
+      const data = await getAdminStats();
+      setStats(data);
+      setError('');
+    } catch (err) {
+      console.error(err);
+      if (!silent) setError('Failed to load admin stats.');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  // Refetch when the tab becomes visible again — covers the case where a
+  // recruiter accepts an applicant in another tab and a job auto-closes,
+  // making the open/closed counts on this dashboard stale.
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await getAdminStats();
-        setStats(data);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load admin stats.');
-      } finally {
-        setLoading(false);
+    fetchStats();
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStats({ silent: true });
       }
-    })();
+    };
+
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, []);
 
   if (loading) {

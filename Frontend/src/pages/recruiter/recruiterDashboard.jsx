@@ -75,6 +75,9 @@ const RecruiterDashboard = () => {
     0
   );
 
+  const openJobs = jobs.filter((j) => j.status !== 'closed');
+  const closedJobs = jobs.filter((j) => j.status === 'closed');
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -118,12 +121,11 @@ const RecruiterDashboard = () => {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-5 text-lg font-bold tracking-tight text-ink">
-          Your job posts
-        </h2>
-
-        {jobs.length === 0 ? (
+      {jobs.length === 0 ? (
+        <section>
+          <h2 className="mb-5 text-lg font-bold tracking-tight text-ink">
+            Your job posts
+          </h2>
           <div className="rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-12 text-center">
             <p className="text-base font-semibold text-ink">
               You haven't posted any jobs yet
@@ -138,47 +140,110 @@ const RecruiterDashboard = () => {
               Create your first job posting →
             </Link>
           </div>
-        ) : (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {jobs.map((job) => (
-              <div
-                key={job._id}
-                className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <JobCard
-                  job={job}
-                  showSaveButton={false}
-                  onDelete={(deletedId) =>
-                    setJobs((prev) => prev.filter((j) => j._id !== deletedId))
-                  }
-                />
+        </section>
+      ) : (
+        <>
+          <section>
+            <h2 className="mb-5 text-lg font-bold tracking-tight text-ink">
+              Open job posts{' '}
+              <span className="text-sm font-medium text-ink-subtle">
+                ({openJobs.length})
+              </span>
+            </h2>
 
-                <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
-                  <span className="text-ink-muted">
-                    Applicants:{' '}
-                    <span className="font-semibold text-ink">
-                      {job.applicantCount || 0}
-                    </span>
-                  </span>
-                  <Link
-                    to={`/recruiter/jobs/${job._id}/applicants`}
-                    className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover"
+            {openJobs.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-8 text-center text-sm text-ink-muted">
+                No open jobs right now. All your postings have filled their slots.
+              </p>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {openJobs.map((job) => (
+                  <div
+                    key={job._id}
+                    className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md"
                   >
-                    View applicants →
-                  </Link>
-                </div>
+                    <JobCard
+                      job={job}
+                      showSaveButton={false}
+                      onDelete={(deletedId) =>
+                        setJobs((prev) => prev.filter((j) => j._id !== deletedId))
+                      }
+                    />
 
-                <Link
-                  to={`/recruiter/jobs/${job._id}/edit`}
-                  className="text-sm font-semibold text-ink-muted transition-colors hover:text-ink"
-                >
-                  Edit job
-                </Link>
+                    <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                      <span className="text-ink-muted">
+                        Applicants:{' '}
+                        <span className="font-semibold text-ink">
+                          {job.applicantCount || 0}
+                        </span>
+                      </span>
+                      <Link
+                        to={`/recruiter/jobs/${job._id}/applicants`}
+                        className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover"
+                      >
+                        View applicants →
+                      </Link>
+                    </div>
+
+                    <Link
+                      to={`/recruiter/jobs/${job._id}/edit`}
+                      className="text-sm font-semibold text-ink-muted transition-colors hover:text-ink"
+                    >
+                      Edit job
+                    </Link>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            )}
+          </section>
+
+          {closedJobs.length > 0 && (
+            <section className="mt-12 border-t border-line pt-10">
+              <h2 className="mb-2 text-lg font-bold tracking-tight text-ink-muted">
+                Closed job posts{' '}
+                <span className="text-sm font-medium text-ink-subtle">
+                  ({closedJobs.length})
+                </span>
+              </h2>
+              <p className="mb-5 text-sm text-ink-subtle">
+                These jobs have filled all their slots and no longer accept new applications.
+              </p>
+
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 opacity-75">
+                {closedJobs.map((job) => (
+                  <div
+                    key={job._id}
+                    className="flex flex-col gap-3 rounded-xl border border-line bg-surface-muted p-5 shadow-sm"
+                  >
+                    <JobCard
+                      job={job}
+                      showSaveButton={false}
+                      onDelete={(deletedId) =>
+                        setJobs((prev) => prev.filter((j) => j._id !== deletedId))
+                      }
+                    />
+
+                    <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                      <span className="text-ink-muted">
+                        Applicants:{' '}
+                        <span className="font-semibold text-ink">
+                          {job.applicantCount || 0}
+                        </span>
+                      </span>
+                      <Link
+                        to={`/recruiter/jobs/${job._id}/applicants`}
+                        className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover"
+                      >
+                        View applicants →
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </div>
   );
 };

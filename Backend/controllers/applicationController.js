@@ -310,6 +310,12 @@ exports.updateApplicationStatus = async (req, res, next) => {
     const newJobStatus =
       acceptedCount >= application.job.totalSlots ? 'closed' : 'open';
 
+    console.log(
+      `[autoClose] job=${application.job._id} accepted=${acceptedCount} ` +
+        `totalSlots=${application.job.totalSlots} ` +
+        `currentStatus=${application.job.status} -> ${newJobStatus}`
+    );
+
     if (application.job.status !== newJobStatus) {
       await JobPost.findByIdAndUpdate(application.job._id, { status: newJobStatus });
     }

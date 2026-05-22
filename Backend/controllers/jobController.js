@@ -31,7 +31,10 @@ exports.getJobs = async (req, res, next) => {
 
     if (type) query.type = type;
 
-    if (status) query.status = status;
+    // Default to only open jobs so closed jobs disappear from the public list
+    // once their slots are filled. Callers can still pass ?status=closed
+    // explicitly (e.g. admin views) to override.
+    query.status = status || 'open';
 
     const jobs = await JobPost.find(query)
       .populate('createdBy', 'username')
