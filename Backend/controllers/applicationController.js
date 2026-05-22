@@ -298,6 +298,22 @@ exports.updateApplicationStatus = async (req, res, next) => {
 
     application.status = status;
     await application.save();
+
+    // Sync job's open/closed state to its accepted-count. We re-check on every
+    // status change (not just accept) so that demoting an accepted applicant
+    // back to pending/rejected re-opens a job that previously hit capacity.
+    const acceptedCount = await Application.countDocuments({
+      job: application.job._id,
+      status: 'accepted'
+    });
+
+    const newJobStatus =
+      acceptedCount >= application.job.totalSlots ? 'closed' : 'open';
+
+    if (application.job.status !== newJobStatus) {
+      await JobPost.findByIdAndUpdate(application.job._id, { status: newJobStatus });
+    }
+
     await application.populate(applicationPopulate);
 
     res.status(200).json({
