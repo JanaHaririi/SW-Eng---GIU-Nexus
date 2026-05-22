@@ -362,44 +362,73 @@ exports.generateCoverLetter = async (req, res, next) => {
 
     const companyName = job.company || 'the company';
 
-    try {
+    // Try a sequence of models — providers drop free hosting for individual
+    // models periodically, so the first one that works wins. Ordered by
+    // reliability on HF Inference Providers' free tier as of 2026.
+    const CANDIDATE_MODELS = [
+      'Qwen/Qwen2.5-7B-Instruct',
+      'HuggingFaceH4/zephyr-7b-beta',
+      'microsoft/Phi-3.5-mini-instruct',
+    ];
+
+    const messages = [
+      {
+        role: 'system',
+        content:
+          'You are a professional career advisor. Write concise, sincere cover letters of 180-250 words. Warm but professional tone. Start directly with "Dear Hiring Manager,". No placeholders like [Your Name] or [Company]. No markdown. No preamble.',
+      },
+      {
+        role: 'user',
+        content:
+          `Write a cover letter for ${user.username} applying to "${job.title}" at ${companyName}.\n\n` +
+          `Job description: ${job.description}\n` +
+          `Job requirements: ${(job.requirements || []).join(', ')}\n\n` +
+          `Candidate background: ${user.bio}`,
+      },
+    ];
+
+    const failures = [];
+    for (const model of CANDIDATE_MODELS) {
       const t0 = Date.now();
-      const completion = await hf.chatCompletion({
-        model: 'mistralai/Mistral-7B-Instruct-v0.3',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a professional career advisor. Write concise, sincere cover letters of 180-250 words. Warm but professional tone. Start directly with "Dear Hiring Manager,". No placeholders like [Your Name] or [Company]. No markdown. No preamble.',
-          },
-          {
-            role: 'user',
-            content:
-              `Write a cover letter for ${user.username} applying to "${job.title}" at ${companyName}.\n\n` +
-              `Job description: ${job.description}\n` +
-              `Job requirements: ${(job.requirements || []).join(', ')}\n\n` +
-              `Candidate background: ${user.bio}`,
-          },
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
-      });
+      try {
+        const completion = await hf.chatCompletion({
+          model,
+          messages,
+          max_tokens: 500,
+          temperature: 0.85,
+          top_p: 0.95,
+          seed: Math.floor(Math.random() * 1_000_000),
+        });
 
-      const text = completion?.choices?.[0]?.message?.content?.trim();
-      console.log(`[HF:chatCompletion] ${Date.now() - t0}ms, ${text?.length || 0} chars`);
+        const text = completion?.choices?.[0]?.message?.content?.trim();
+        const ms = Date.now() - t0;
 
-      if (!text) {
-        throw new Error('Empty response from chat-completion model');
+        if (!text) {
+          console.warn(`[HF:chatCompletion] ${model} returned empty body (${ms}ms) — trying next`);
+          failures.push(`${model}: empty response`);
+          continue;
+        }
+
+        console.log(`[HF:chatCompletion] ${model} OK (${ms}ms, ${text.length} chars)`);
+        return res.status(200).json({ success: true, coverLetter: text });
+      } catch (hfErr) {
+        const ms = Date.now() - t0;
+        const detail =
+          hfErr?.httpResponse?.status ||
+          hfErr?.response?.status ||
+          hfErr?.cause?.message ||
+          hfErr?.message ||
+          'unknown error';
+        console.warn(`[HF:chatCompletion] ${model} failed after ${ms}ms: ${detail}`);
+        failures.push(`${model}: ${detail}`);
       }
-
-      return res.status(200).json({ success: true, coverLetter: text });
-    } catch (hfErr) {
-      console.error('[HF:chatCompletion] giving up:', hfErr?.message || hfErr);
-      return res.status(503).json({
-        success: false,
-        message: 'AI cover letter generation is unavailable right now. Please try again in a moment.',
-      });
     }
+
+    console.error('[HF:chatCompletion] all models failed:', failures.join(' | '));
+    return res.status(503).json({
+      success: false,
+      message: 'AI cover letter generation is unavailable right now. Please try again in a moment.',
+    });
   } catch (err) {
     if (err.name === 'CastError') {
       return res.status(404).json({ success: false, message: 'Job not found' });
